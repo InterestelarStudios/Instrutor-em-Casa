@@ -1,3 +1,5 @@
+// ignore_for_file: curly_braces_in_flow_control_structures
+
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,10 +16,11 @@ import 'package:instrutor_em_casa/widgets/theme.dart';
 import 'package:ionicons/ionicons.dart';
 
 class BuscarInstrutores extends StatefulWidget {
-  const BuscarInstrutores({super.key, required this.usuario, required this.position, required this.style});
+  const BuscarInstrutores({super.key, required this.usuario, required this.position, required this.style, this.initialCategory});
   final Usuario usuario;
   final LatLng position;
   final String? style;
+  final String? initialCategory;
 
   @override
   State<BuscarInstrutores> createState() => _BuscarInstrutoresState();
@@ -26,6 +29,8 @@ class BuscarInstrutores extends StatefulWidget {
 class _BuscarInstrutoresState extends State<BuscarInstrutores> {
   final _controller = Completer<GoogleMapController>();
   late Stream<List<DocumentSnapshot<Map<String, dynamic>>>> stream;
+  double radius = 10; // Default radius in Km
+  String? selectedCategory;
 
   Stream<List<DocumentSnapshot<Map<String, dynamic>>>> addListenersInstrutores() {
     // 1. Centro da busca
@@ -42,14 +47,90 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
     return GeoCollectionReference<Map<String, dynamic>>(collectionReference)
         .subscribeWithin(
       center: center,
-      radiusInKm: 10,
+      radiusInKm: radius,
       field: 'geo',
       geopointFrom: geopointFrom,
       strictMode: true,
       queryBuilder: (query) {
         var filtrada = query.where('type', isEqualTo: "instrutor");
         
+        if (selectedCategory != null) {
+          filtrada = filtrada.where('instrutor.categories', arrayContains: selectedCategory);
+        }
+        
         return filtrada;
+      },
+    );
+  }
+
+  void _updateFilter(String? category) {
+    setState(() {
+      selectedCategory = category;
+      stream = addListenersInstrutores();
+    });
+  }
+
+  void _updateRadius(double newRadius) async {
+    setState(() {
+      radius = newRadius;
+      stream = addListenersInstrutores();
+    });
+
+    // Adjust zoom based on radius
+    final controller = await _controller.future;
+    double zoom = 11.5;
+    if (radius <= 5) zoom = 13;
+    else if (radius <= 10) zoom = 12;
+    else if (radius <= 20) zoom = 11;
+    else if (radius <= 50) zoom = 9.5;
+    else zoom = 8;
+
+    controller.animateCamera(CameraUpdate.newLatLngZoom(widget.position, zoom));
+  }
+
+  void _showRadiusDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        double tempRadius = radius;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text("Raio de Busca"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("${tempRadius.toInt()} km"),
+                  Slider(
+                    value: tempRadius,
+                    min: 5,
+                    max: 100,
+                    divisions: 19,
+                    label: "${tempRadius.toInt()} km",
+                    onChanged: (value) {
+                      setDialogState(() {
+                        tempRadius = value;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancelar"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _updateRadius(tempRadius);
+                    Navigator.pop(context);
+                  },
+                  child: const Text("Atualizar"),
+                ),
+              ],
+            );
+          },
+        );
       },
     );
   }
@@ -57,6 +138,7 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
   @override
   void initState() {
     super.initState();
+    selectedCategory = widget.initialCategory;
     stream = addListenersInstrutores();
   }
   
@@ -75,7 +157,7 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
               ),
               zoomControlsEnabled: true,
               myLocationEnabled: true,
-              myLocationButtonEnabled: true,
+              myLocationButtonEnabled: false,
               onMapCreated: (GoogleMapController controller) {
                 _controller.complete(controller);
               },
@@ -84,7 +166,7 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
                 Circle(
                   circleId: CircleId("Center"),
                   center: widget.position,
-                  radius: 10000,
+                  radius: radius * 1000,
                   strokeColor: AppColors.primary,
                   fillColor: AppColors.primary.withAlpha(50),
                   strokeWidth: 1
@@ -142,7 +224,10 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
                         ],
                       ),
                     ),
-                    StreamBuilder(
+                    const SizedBox(height: 15),
+                    _buildCategoryFilter(),
+                    const SizedBox(height: 10),
+                    StreamBuilder<List<DocumentSnapshot<Map<String, dynamic>>>>(
                       stream: stream,
                       builder: (context, snapshot){
                         if(snapshot.connectionState == ConnectionState.waiting){
@@ -159,6 +244,23 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
                                 ),
                               );
                             }
+                          );
+                        }
+
+                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return Padding(
+                            padding: const EdgeInsets.all(40),
+                            child: Column(
+                              children: [
+                                Icon(Ionicons.search_outline, size: 50, color: AppColors.textMuted),
+                                const SizedBox(height: 10),
+                                Text(
+                                  "Nenhum instrutor encontrado nesse raio.",
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.body.copyWith(color: AppColors.textMuted),
+                                ),
+                              ],
+                            ),
                           );
                         }
 
@@ -183,6 +285,7 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
                                 ),
                               ),
                               child: Card(
+                                margin: const EdgeInsets.only(bottom: 10),
                                 child: Padding(
                                   padding: const EdgeInsets.all(20),
                                   child: Row(
@@ -197,7 +300,7 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
                                             Text(instrutor.name, style: Theme.of(context).textTheme.titleLarge,),
                                             Row(
                                               children: [
-                                                StarRating(stars: 4.2, size: 15,).build(context),
+                                                StarRating(stars: 4.2, size: 15,),
                                                 const SizedBox(width: 10,),
                                                 Text("4.2", style: Theme.of(context).textTheme.titleSmall,),
                                                 const SizedBox(width: 5,),
@@ -221,7 +324,7 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
                                                       widget.position.latitude,
                                                       widget.position.longitude
                                                     ) / 1000;
-                                                    return Text("${distance.toStringAsFixed(1)} km", style: Theme.of(context).textTheme.bodySmall,);
+                                                    return Text("${distance.toStringAsFixed(1)} km²", style: Theme.of(context).textTheme.bodySmall,);
                                                   },
                                                 )
                                               ],
@@ -246,19 +349,90 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: FloatingActionButton(
-                onPressed: ()=> Navigator.pop(context),
-                backgroundColor: Colors.white,
-                foregroundColor: AppColors.gray950,
-                elevation: 5,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadiusGeometry.circular(20)
-                ),
-                child: Icon(Icons.keyboard_arrow_left_rounded),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  FloatingActionButton(
+                    heroTag: "btnBack",
+                    onPressed: ()=> Navigator.pop(context),
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColors.gray950,
+                    elevation: 5,
+                    mini: true,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadiusGeometry.circular(20)
+                    ),
+                    child: Icon(Icons.keyboard_arrow_left_rounded),
+                  ),
+                  GestureDetector(
+                    onTap: _showRadiusDialog,
+                    child: Card(
+                      elevation: 5,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        child: Row(
+                          children: [
+                            Icon(Ionicons.locate_outline, size: 18, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            Text(
+                              "${radius.toInt()} km²",
+                              style: AppTextStyles.h3,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilter() {
+    final categories = ['A', 'B', 'C', 'D', 'E'];
+    return SizedBox(
+      height: 45,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        scrollDirection: Axis.horizontal,
+        itemCount: categories.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            final isAll = selectedCategory == null;
+            return ChoiceChip(
+              label: const Text("Todos"),
+              selected: isAll,
+              onSelected: (selected) => _updateFilter(null),
+              selectedColor: AppColors.primary100,
+              labelStyle: TextStyle(
+                color: isAll ? AppColors.primary600 : AppColors.textSecondary,
+                fontWeight: isAll ? FontWeight.bold : FontWeight.normal,
+              ),
+            );
+          }
+
+          final cat = categories[index - 1];
+          final isSelected = selectedCategory == cat;
+
+          return ChoiceChip(
+            label: Text("Cat. $cat"),
+            selected: isSelected,
+            onSelected: (selected) => _updateFilter(selected ? cat : null),
+            selectedColor: AppColors.primary100,
+            labelStyle: TextStyle(
+              color: isSelected ? AppColors.primary600 : AppColors.textSecondary,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          );
+        },
       ),
     );
   }

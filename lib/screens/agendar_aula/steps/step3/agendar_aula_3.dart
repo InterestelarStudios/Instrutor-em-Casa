@@ -55,8 +55,10 @@ class _AgendarAula3State extends State<AgendarAula3> with AutomaticKeepAliveClie
     switch (type) {
       case PaymentType.pix:
         return "PIX";
-      case PaymentType.cartao:
-        return "Cartão de Crédito/Débito";
+      case PaymentType.credito:
+        return "Cartão de Crédito";
+      case PaymentType.debito:
+        return "Cartão de Débito";
       default:
         return "Dinheiro";
     }

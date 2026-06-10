@@ -2,6 +2,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:instrutor_em_casa/models/usuario.dart';
 import 'package:instrutor_em_casa/screens/base_screen.dart';
+import 'package:instrutor_em_casa/screens/profile/central_ajuda_screen.dart';
+import 'package:instrutor_em_casa/screens/profile/change_email_screen.dart';
+import 'package:instrutor_em_casa/screens/profile/change_password_screen.dart';
+import 'package:instrutor_em_casa/screens/profile/delete_account_screen.dart';
+import 'package:instrutor_em_casa/screens/profile/edit_profile_screen.dart';
+import 'package:instrutor_em_casa/screens/profile/my_documents_screen.dart';
+import 'package:instrutor_em_casa/screens/profile/termos_politicas_screen.dart';
 import 'package:instrutor_em_casa/widgets/avatar.dart';
 import 'package:instrutor_em_casa/widgets/dialog_services.dart';
 import 'package:instrutor_em_casa/widgets/stars.dart';
@@ -19,6 +26,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
+    final bool isAluno = widget.usuario.type == UserType.aluno;
+
     return ListView(
       children: [
         Card(
@@ -50,32 +59,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ListTile(
           leading: Icon(Ionicons.pencil_outline),
           title: Text("Editar Perfil"),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EditProfileScreen(usuario: widget.usuario))),
         ),
         ListTile(
           leading: Icon(Ionicons.document_outline),
           title: Text("Meus Documentos"),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MyDocumentsScreen(usuario: widget.usuario))),
         ),
         ListTile(
           leading: Icon(Ionicons.key_outline),
           title: Text("Alterar Senha"),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
         ),
         ListTile(
           leading: Icon(Ionicons.mail_outline),
           title: Text("Alterar E-mail"),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangeEmailScreen())),
         ),
         title("Aulas"),
-        ListTile(
-          leading: Icon(Ionicons.time_outline),
-          title: Text("Horas de direção"),
-        ),
+        if (isAluno) ...[
+          ListTile(
+            leading: Icon(Ionicons.time_outline),
+            title: Text("Horas de direção"),
+          ),
+        ],
         ListTile(
           leading: Icon(Ionicons.star_outline),
           title: Text("Minhas avaliações"),
         ),
-        ListTile(
-          leading: Icon(Ionicons.heart_outline),
-          title: Text("Instrutores Favoritos"),
-        ),
+        if (isAluno) ...[
+          ListTile(
+            leading: Icon(Ionicons.heart_outline),
+            title: Text("Instrutores Favoritos"),
+          ),
+        ],
         title("Pagamentos"),
         ListTile(
           leading: Icon(Ionicons.card_outline),
@@ -89,10 +106,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ListTile(
           leading: Icon(Ionicons.help_outline),
           title: Text("Central de Ajuda"),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CentralAjudaScreen())),
         ),
         ListTile(
           leading: Icon(Ionicons.information_circle_outline),
           title: Text("Termos e Políticas"),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TermosPoliticasScreen())),
         ),
         ListTile(
           leading: Icon(Ionicons.phone_portrait_outline),
@@ -128,6 +147,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           leading: Icon(Ionicons.log_out_outline),
         ),
         ListTile(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DeleteAccountScreen(usuario: widget.usuario))),
           leading: Icon(Ionicons.phone_portrait_outline, color: AppColors.emergency),
           title: Text("Excluir Conta", style: TextStyle(color: AppColors.emergency),),
         ),
@@ -138,7 +158,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget title(String text){
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Text("Minha conta", style: Theme.of(context).textTheme.bodySmall),
+      child: Text(text, style: Theme.of(context).textTheme.bodySmall),
     );
   }
 }

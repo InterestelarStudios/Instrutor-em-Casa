@@ -7,6 +7,7 @@ import 'package:instrutor_em_casa/models/usuario.dart';
 import 'package:instrutor_em_casa/screens/aluno_screens/aulas_screen/aulas_screen.dart';
 import 'package:instrutor_em_casa/screens/aluno_screens/home/home_screen_aluno.dart';
 import 'package:instrutor_em_casa/screens/chat/conversas_screen.dart';
+import 'package:instrutor_em_casa/screens/profile/notifications_screen.dart';
 import 'package:instrutor_em_casa/screens/profile/profile_screen.dart';
 import 'package:instrutor_em_casa/services/location_services.dart';
 import 'package:instrutor_em_casa/widgets/loading_box.dart';
@@ -89,15 +90,35 @@ class _AlunoBaseScreenState extends State<AlunoBaseScreen> {
                 height: 50,
                 width: 50,
                 child: FloatingActionButton(
-                  onPressed: (){},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) => NotificationsScreen(usuario: widget.usuario),
+                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                          const begin = Offset(1.0, 0.0);
+                          const end = Offset.zero;
+                          const curve = Curves.ease;
+                          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                          return SlideTransition(
+                            position: animation.drive(tween),
+                            child: child,
+                          );
+                        },
+                      ),
+                    );
+                  },
                   backgroundColor: Colors.grey[200],
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadiusGeometry.circular(20)
                   ),
-                  child: Badge.count(
-                    count: 5,
-                    child: Icon(Iconsax.notification, color: Colors.grey[800],),
-                  ),
+                  child: widget.usuario.notificationsCount > 0 
+                    ? Badge.count(
+                        count: widget.usuario.notificationsCount,
+                        child: Icon(Iconsax.notification, color: Colors.grey[800],),
+                      )
+                    : Icon(Iconsax.notification, color: Colors.grey[800],),
                 ),
               ),
               const SizedBox(width: 20,),

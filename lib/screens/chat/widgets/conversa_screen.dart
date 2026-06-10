@@ -39,6 +39,7 @@ class _TelaConversaState extends State<TelaConversa> {
   }
 
   void read(){
+    if(chat.id.isEmpty) return;
     FirebaseFirestore.instance.collection("chats").doc(chat.id).update({
       myUser.id : 0,
     });

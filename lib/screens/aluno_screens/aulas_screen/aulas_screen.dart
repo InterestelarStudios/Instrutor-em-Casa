@@ -56,7 +56,30 @@ class _AulasAlunoScreenState extends State<AulasAlunoScreen> with AutomaticKeepA
           itemBuilder: (context, snapshot){
             final aula = snapshot.data();
             return AulaBuild(aula: aula, usuario: widget.usuario);
-          }
+          },
+          emptyBuilder: (context) => Card(
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+              side: BorderSide(color: Colors.grey[200]!),
+            ),
+            elevation: 0,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              leading: CircleAvatar(
+                backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                child: Icon(Icons.school_outlined, color: Theme.of(context).primaryColor, size: 20,),
+              ),
+              title: const Text(
+                "Nenhuma aula ainda",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                "Você ainda não agendou nenhuma aula. Que tal começar agora?",
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+            ),
+          ),
         ),
       ],
     );

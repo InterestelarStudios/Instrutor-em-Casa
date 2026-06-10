@@ -1,1 +1,35 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"instrutor-em-casa","appId":"1:1021567319412:android:7cae7ad2585448d1a88021","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"instrutor-em-casa","configurations":{"android":"1:1021567319412:android:7cae7ad2585448d1a88021","ios":"1:1021567319412:ios:dc27dbd86570f287a88021"}}}}}}
+{
+  "functions": [
+    {
+      "codebase": "default",
+      "source": "functions",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ],
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "instrutor-em-casa",
+          "appId": "1:1021567319412:android:7cae7ad2585448d1a88021",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "instrutor-em-casa",
+          "configurations": {
+            "android": "1:1021567319412:android:7cae7ad2585448d1a88021",
+            "ios": "1:1021567319412:ios:dc27dbd86570f287a88021"
+          }
+        }
+      }
+    }
+  }
+}

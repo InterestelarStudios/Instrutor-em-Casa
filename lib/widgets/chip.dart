@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:instrutor_em_casa/widgets/theme.dart';
 
-enum AppChipType {none, done, waiting, inactive}
+enum AppChipType {none, done, waiting, inactive, danger}
 
 class AppChip extends StatelessWidget {
   const AppChip({super.key, required this.title, this.type = AppChipType.none, this.circle = true});
@@ -22,6 +22,8 @@ class AppChip extends StatelessWidget {
           return AppColors.warning;
         case AppChipType.inactive:
           return AppColors.textSecondary;
+        case AppChipType.danger:
+          return AppColors.danger;
       }
     }
 

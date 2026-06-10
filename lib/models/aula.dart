@@ -9,11 +9,68 @@ import 'package:instrutor_em_casa/models/instrutor.dart';
 import 'package:instrutor_em_casa/models/usuario.dart';
 import 'package:instrutor_em_casa/widgets/theme.dart';
 
-enum LessonStatus {requested, accepted, refused, expired, done}
+enum LessonStatus {requested, accepted, refused, expired, active, done, canceled, partially_done, inactive}
 enum LessonType {obrigatorio, treinamento, habilitado}
 enum LessonVehicle {aluno, instrutor}
-enum LessonTime {h1, h2, h3, h4}
-enum PaymentType {pix, cartao, dinheiro}
+enum PaymentType {pix, credito, debito, dinheiro}
+enum JourneyState {none, requested, enRoute, arrived}
+enum SessionStatus {scheduled, completed, missed}
+
+class SessaoAula {
+  String id;
+  Timestamp date;
+  int duration; // hours in this session
+  bool checkInAluno;
+  bool checkInInstrutor;
+  Timestamp? start;
+  Timestamp? end;
+  JourneyState journeyState;
+  SessionStatus status;
+
+  SessaoAula({
+    required this.id,
+    required this.date,
+    required this.duration,
+    this.checkInAluno = false,
+    this.checkInInstrutor = false,
+    this.start,
+    this.end,
+    this.journeyState = JourneyState.none,
+    this.status = SessionStatus.scheduled,
+  });
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'id': id,
+      'date': date,
+      'duration': duration,
+      'checkInAluno': checkInAluno,
+      'checkInInstrutor': checkInInstrutor,
+      'start': start,
+      'end': end,
+      'journeyState': journeyState.name,
+      'status': status.name,
+    };
+  }
+
+  factory SessaoAula.fromMap(Map<String, dynamic> map) {
+    return SessaoAula(
+      id: map['id'] as String,
+      date: map['date'] as Timestamp,
+      duration: map['duration'] as int,
+      checkInAluno: map['checkInAluno'] as bool? ?? false,
+      checkInInstrutor: map['checkInInstrutor'] as bool? ?? false,
+      start: map['start'] as Timestamp?,
+      end: map['end'] as Timestamp?,
+      journeyState: map['journeyState'] != null 
+        ? JourneyState.values.where((e) => e.name == map['journeyState']).first 
+        : JourneyState.none,
+      status: map['status'] != null 
+        ? SessionStatus.values.where((e) => e.name == map['status']).first 
+        : SessionStatus.scheduled,
+    );
+  }
+}
 
 class Aula {
 
@@ -22,13 +79,16 @@ class Aula {
   UserDetails instrutor;
   CNHCategory category;
   LessonStatus status;
-  Timestamp date;
+  Timestamp date; // Initial date
   Timestamp created;
-  LessonTime duration;
+  int horasContratadas;
+  int horasRestantes;
+  List<SessaoAula> sessions;
   LessonType type;
   LessonVehicle vehicle;
   LessonPrice price;
   PaymentType paymentType;
+  Map<String, dynamic>? liveLocation;
 
   Aula({
     required this.id,
@@ -38,11 +98,14 @@ class Aula {
     required this.status,
     required this.date,
     required this.created,
-    required this.duration,
+    required this.horasContratadas,
+    required this.horasRestantes,
+    required this.sessions,
     required this.type,
     required this.vehicle,
     required this.price,
     required this.paymentType,
+    this.liveLocation,
   });
 
 
@@ -55,11 +118,14 @@ class Aula {
       'status': status.name,
       'date': date,
       'created': created,
-      'duration': duration.name,
+      'horasContratadas': horasContratadas,
+      'horasRestantes': horasRestantes,
+      'sessions': sessions.map((x) => x.toMap()).toList(),
       'type': type.name,
       'vehicle': vehicle.name,
       'price': price.toMap(),
       'paymentType' : paymentType.name,
+      'liveLocation': liveLocation,
     };
   }
 
@@ -72,11 +138,14 @@ class Aula {
       status: LessonStatus.values.where((e)=> e.name == map['status']).first,
       date: map['date'] as Timestamp,
       created: map['created'] as Timestamp,
-      duration: LessonTime.values.where((e)=> e.name == map['duration']).first,
+      horasContratadas: map['horasContratadas'] as int? ?? 1,
+      horasRestantes: map['horasRestantes'] as int? ?? 1,
+      sessions: (map['sessions'] as List<dynamic>?)?.map((x) => SessaoAula.fromMap(x as Map<String, dynamic>)).toList() ?? [],
       type: LessonType.values.where((e)=> e.name == map['type']).first,
       vehicle: LessonVehicle.values.where((e)=> e.name == map['vehicle']).first,
       price: LessonPrice.fromMap(map['price'] as Map<String,dynamic>),
       paymentType: PaymentType.values.where((e)=> e.name == map['paymentType']).first,
+      liveLocation: map['liveLocation'] as Map<String, dynamic>?,
     );
   }
 
@@ -90,9 +159,17 @@ class Aula {
         return AppColors.warning;
       case LessonStatus.accepted:
         return AppColors.primary;
+      case LessonStatus.active:
+        return AppColors.primary;
       case LessonStatus.done:
         return AppColors.success;
       case LessonStatus.refused:
+        return AppColors.emergency;
+      case LessonStatus.canceled:
+        return AppColors.emergency;
+      case LessonStatus.partially_done:
+        return AppColors.success;
+      case LessonStatus.inactive:
         return AppColors.emergency;
       default:
         return Colors.grey;
@@ -105,12 +182,20 @@ class Aula {
         return "Aguardando Confirmação";
       case LessonStatus.accepted:
         return "Confirmado";
+      case LessonStatus.active:
+        return "Em andamento";
       case LessonStatus.done:
         return "Concluido";
       case LessonStatus.refused:
         return "Recusado";
       case LessonStatus.expired:
         return "Expirado";
+      case LessonStatus.canceled:
+        return "Cancelado";
+      case LessonStatus.partially_done:
+        return "Concluido Parcialmente";
+      case LessonStatus.inactive:
+        return "Cancelado por Inatividade";
     }
   }
 

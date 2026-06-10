@@ -39,6 +39,29 @@ class _ConversasScreenState extends State<ConversasScreen> with AutomaticKeepAli
           query: query,
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
+          emptyBuilder: (context) => Card(
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+              side: BorderSide(color: Colors.grey[200]!),
+            ),
+            elevation: 0,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              leading: CircleAvatar(
+                backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                child: Icon(Icons.chat_bubble_outline_rounded, color: Theme.of(context).primaryColor, size: 20,),
+              ),
+              title: const Text(
+                "Nenhuma conversa",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                "Suas mensagens aparecerão aqui assim que você iniciar um chat.",
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+            ),
+          ),
           itemBuilder: (context, snapshot) {
             final conversa = snapshot.data();
             return chatBuild(conversa);
