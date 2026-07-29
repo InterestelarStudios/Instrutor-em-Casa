@@ -1,0 +1,667 @@
+Criação de subcontas com o BaaS do Asaas
+⚠️
+Importante
+O modelo BaaS do Asaas (Antigo "White Label"), para fornecimento de serviços bancários para terceiros (Banking As a Service) agora está sujeito à obrigatoriedade de exposição e identificação do Asaas como Instituição Prestadora, conforme sinalizado pela Resolução Conjunta nº 16/17. Além disso, as novas contas integram-se inicialmente ao período de avaliação regulatória para Serviços na API.
+
+Com o BaaS do Asaas habilitado seu cliente não precisará ter acesso ao nosso sistema e não receberá nenhum tipo de comunicação por parte do Asaas, cabendo a você nesse caso disponibilizar os recursos desejados de nossa documentação API dentro do seu sistema integrado, garantindo, apenas, a conformidade com as regras de empresa Tomadora.
+
+O processo para começar com criação de subcontas no modelo BaaS se resume nos seguintes passos:
+
+Solicitação ao seu gerente de contas para liberação desta funcionalidade
+Criação da subconta Asaas com Webhooks sendo configurados
+Envio da Documentação da subconta, pelo onboarding com envio de documentos via link
+Consultar situação cadastral da subconta
+🚧
+Atenção
+O formato BaaS precisa estar previamente alinhado e implantado pelo seu gerente de contas. A criação de contas Asaas usando os métodos listados abaixo sem uma definição prévia do funcionamento no formato autorizado, resultará na criação de subcontas fora dessa estrutura.
+
+Em Sandbox, para fazer o teste, basta verificar aqui nessa sessão como configurar na conta sandbox.
+
+Criação da subconta com Webhooks sendo configurados
+POST/v3/accounts
+Confira a referência completa deste endpoint
+
+JSON
+
+{
+    "name": "Subconta criada via API",
+    "email": "emaildaempresa@gmail.com",
+    "cpfCnpj": "66625514000140",
+    "birthDate": "1994-05-16",
+    "companyType": "MEI",
+    "phone": "11 32300606",
+    "mobilePhone": "11 988451155",
+    "address": "Av. Rolf Wiest",
+    "addressNumber": "277",
+    "complement": "Sala 502",
+    "province": "Bom Retiro",
+    "postalCode": "89223005",
+    "webhooks": [
+        {
+            "name": "Webhook para cobranças",
+            "url": "http://meusite.com/webhook/payments",
+            "email": "john.doe@asaas.com.br",
+            "sendType": "SEQUENTIALLY",
+            "interrupted": false,
+            "enabled": true,
+            "apiVersion": 3,
+            "authToken": "5tLxsL6uoN",
+            "events": ["PAYMENT_CREATED", "PAYMENT_UPDATED", "PAYMENT_CONFIRMED", "PAYMENT_RECEIVED"]
+        }
+    ]
+}
+É de suma importância que os Webhooks sejam configurados de início em subcontas BaaS para garantir que nenhum evento de criação ou atualização da conta sejam perdidos, evitando também a necessidade de requisições secundárias para configuração desses métodos.
+
+Os detalhes sobre os eventos disponíveis para Webhooks pode ser conferido no guia de integrações de Webhook.
+
+Período de avaliação regulatória - O que é?
+O Período de avaliação regulatória é um estágio obrigatório, ofertado pelo Asaas para que você tenha todo o suporte para utilizar nossa API seguindo todas as regras dispostas pelo Banco Central, pela Resolução Conjunta nº 16/17. Esse período se inicia a partir da primeira criação de subconta via API.
+
+Limites durante o período:
+
+Máximo de 10 subcontas de diferentes titulares.
+Máximo de R$ 2.000,00 emitidos em cobranças por subconta.
+Vigência de até 60 dias corridos a partir da primeira subconta criada.
+📘
+Importante
+Após atingir qualquer limite (quantidade, valor ou prazo), a criação de novas subcontas e emissão adicional de cobranças, assinaturas, links de pagamento, será automaticamente bloqueada até a finalização do processo de avaliação regulatória (checklists/documentação).
+No novo cenário regulatório, em cada ponto de contato com seu cliente final (telas próprias, comprovantes, onboarding, contratos), é obrigatório evidenciar a marca, os links e os textos de responsabilidade do Asaas. Consulte o Playbook de adequação do Asaas para detalhes, ele será criado e enviado exclusivamente pra você, pelo nosso time de atendimento.
+Clique aqui e consulte o funcionamento completo.
+
+
+Onboarding e envio de documentos via link
+Utilizando um processo de onboarding mais fácil.
+
+Após ter a conta criada, é necessário enviar os documentos para que ela seja aprovada, neste fluxo você irá entender como enviar seu cliente para uma URL do Asaas para continuar seu onboarding.
+
+O envio via link é a forma mais fácil de fazer o onboarding dos seus clientes. Seguindo esse fluxo, para cada documento será gerado um link único, onde o cliente poderá anexar seu documento e também fazer o fluxo de selfie para reconhecimento facial. De acordo com as regras sinalizadas pelo Banco Central na resolução conjunta 16, pela responsabilidade do Asaas pelo fluxo, é necessário que nossa marca esteja em evidência nas telas
+
+O processo se resume nos seguintes passos:
+
+Criação da conta Asaas com Webhooks sendo configurados
+Envio da documentação da conta
+Consultar situação cadastral da conta
+🚧
+Lembre-se:
+O formato BaaS precisa estar previamente alinhado e implantado pelo seu gerente de contas. A criação de contas Asaas usando os métodos listados abaixo sem uma definição prévia do funcionamento no formato BaaS resultará na criação de subcontas fora dessa estrutura.
+
+Em Sandbox, para fazer o teste, basta entrar em contato com o Suporte e solicitar a liberação.
+
+Envio da documentação da conta
+Para análise da conta, será necessário realizar o envio da documentação. Com o upload dos documentos, a conta entrará em análise a ser realizada dentro de até 48 horas.
+
+Para contas PF, MEI, LTDA ou Individual, é preciso enviar documento de identificação (RG, CPF ou CNPJ),e selfie do titular/sócio administrador. O onboarding será realizado através de um link externo, cuja URL será devolvida no atributo onboardingUrl dentro do ID respectivo.
+
+Exemplo de layout da página de envio de documentos via link
+Exemplo de layout da página de envio de documentos via link
+
+Para contas de Associação, será necessário além do onboarding externo, o envio via API de documentos adicionais, que poderão ser consultados no endpoint.
+
+📘
+Se um dos documentos enviados no link externo for reprovado, um novo link será gerado.
+
+Dependendo das condições da análise, é possível que novos documentos adicionais sejam solicitados pelo Asaas. Nesse caso, serão abertos grupos de documentos com o type CUSTOM e sua descrição no atributo description.
+A situação da análise dos documentos e da aprovação geral do cadastro poderá ser acompanhada através dos Webhooks de Situação da Conta.
+
+GET/v3/myAccount/documents
+Confira a referência completa deste endpoint
+
+🚧
+Atenção
+Após criar uma subconta, defina um time out de 15 segundos antes de realizar a chamada pra este endpoint.
+
+Caso a chamada para verificar os documentos subsequentes seja feita em sequência a criação da conta, você provavelmente será informado de que documentos não obrigatórios sejam enviados pois a criação e validação da conta com a receita federal ainda não foi concluída.
+
+O tempo é necessário apenas para a validação, captação de dados necessários e criação da conta.
+
+Essa consulta lhe retornará uma Array com a relação de documentos necessários para aprovação da sua conta Asaas e os seus respectivos links para envio através do campo onboardingUrl.
+
+Tendo eles em mão, basta redirecionar seu cliente até o link para que ele faça o envio dos documentos.
+
+Enviando documentos que não possuem onboardingUrl
+Cada grupo de documento possui um id específico, que deverá ser utilizado na API de "Enviar documento" para subir o documento respectivo caso não seja via onboading externo. Você pode enviar mais de um documento por grupo de documentos.
+
+POST/v3/myAccount/documents/{id}
+Confira a referência completa deste endpoint/
+
+JSON
+
+{  
+    "documentFile": [<file>],  
+    "type": "IDENTIFICATION",  
+}
+📘
+Após o envio do documento, esse documento vai ter um id especifico para ele e através desse id que você pode remover o documento enviado (e não pelo id do grupo de documento).
+
+Exemplo de retorno do GET de que você enviou todos os documentos
+Após enviar todos os documentos, a resposta deverá retornar da seguinte forma:
+
+JSON
+
+{
+    "rejectReasons": null,
+    "data": [
+        {
+            "id": "172ed152-4fa4-43ad-9b69-39c323e9526c",
+            "status": "PENDING",
+            "type": "MINUTES_OF_ELECTION",
+            "title": "Ata de eleição da última diretoria",
+            "description": "Não possui descrição",
+            "responsible": {
+                "name": null,
+                "type": "ASSOCIATION"
+            },
+            "documents": [
+                {
+                    "id": "d6a55791-7b8b-4014-8457-a453c6e5afd5",
+                    "status": "PENDING"
+                }
+            ]
+        },
+        {
+            "id": "da90162b-61ea-48a1-bf73-4638e079043a",
+            "status": "PENDING",
+            "type": "IDENTIFICATION",
+            "title": "Documentos de identificação",
+            "description": "Serão aceitos RG ou CNH.",
+            "responsible": {
+                "name": "presidente",
+                "type": "DIRECTOR"
+            },
+            "documents": [
+                {
+                    "id": "eb879e06-5fae-44e9-a88d-c5a428945dec",
+                    "status": "PENDING"
+                },
+                {
+                    "id": "88eaed70-bea6-45ff-ad99-dbea9469f725",
+                    "status": "PENDING"
+                }
+            ]
+        },
+        {
+            "id": "da90162b-61ea-48a1-bf73-4638e079043a",
+            "status": "PENDING",
+            "type": "IDENTIFICATION_SELFIE",
+            "title": "Selfie de identificação",
+            "description": "Selfie do Diretor",
+            "responsible": {
+                "name": "presidente",
+                "type": "DIRECTOR"
+            },
+            "documents": [
+                {
+                    "id": "0f059fe4-7c7b-4dac-b936-41e9430b380a",
+                    "status": "PENDING"
+                }
+            ]
+        }
+    ]
+}
+Outros endpoints disponíveis
+Visualizar documento enviado
+
+GET/v3/myAccount/documents/files/{id}
+Confira a referência completa deste endpoint
+
+Atualizar documento enviado
+
+POST/v3/myAccount/documents/files/{id}
+Confira a referência completa deste endpoint
+
+Remover documento enviado
+
+DELETE/v3/myAccount/documents/files/{id}
+Confira a referência completa deste endpoint
+
+Consultar situação cadastral da Conta
+Caso os webhooks de atualização de situação cadastral não tenham sido implementados e/ou você queira realizar a consulta individualmente, ela poderá ser feita requisitando o endpoint abaixo.
+
+GET/v3/myAccount/status
+Confira a referência completa deste endpoint
+
+JSON
+
+{
+  "id": "afb621a5-9030-4b4d-88e8-5b80306d13350",
+  "commercialInfo": "AWAITING_APPROVAL",
+  "bankAccountInfo": "APPROVED",
+  "documentation": "APPROVED",
+  "general": "APPROVED"
+}
+Os valores possíveis são:
+
+Dados comerciais (commercialInfo):
+
+REJECTED - Rejeitado
+APPROVED - Aprovado
+AWAITING_APPROVAL - Os dados comerciais podem ficar nesse status quando necessitam de alguma aprovação manual, portanto estarão na fila de análise.
+PENDING - Os dados comerciais ficam nesta situação quando ainda não estão totalmente preenchidos, por exemplo no onboarding, onde o preenchimento ocorre em etapas.
+Dados da conta bancária (bankAccountInfo):
+
+PENDING - Dados ainda não foram enviados
+APPROVED - Aprovado
+REJECTED - Rejeitado
+Documentação (documentation):
+
+PENDING - Documentação ainda não foi enviada
+APPROVED - Aprovada
+REJECTED - Rejeitada
+AWAITING_APPROVAL - Quando todos os documentos solicitados são enviados, e não foi possível realizar uma aprovação automática será utilizado este status e também estarão na fila de analise.
+Aprovação geral (general):
+
+PENDING - A aprovação geral estará neste status se os dados comerciais ou a documentação estiverem em PENDING, AWAITING_APPROVAL, REJECTED
+APPROVED - Conta aprovada
+REJECTED - Conta reprovada
+AWAITING_APPROVA - É o status utilizado quando a conta está com todos os outros status aprovados, e a aprovação geral não pôde ser feita automaticamente. Estará na fila aguardando uma análise manual.
+📘
+A conta estará 100% aprovada quando o retorno do atributo general for APPROVED.
+
+Atualizando dados comerciais
+Em alguns casos os dados comerciais podem estar inconsistentes e você precisa atualizá-los, é possível fazer isso através do endpoint de atualizar dados comerciais da conta.
+
+POST/v3/myAccount/commercialInfo
+Confira a referência completa deste endpoint
+
+JSON
+
+{
+    "personType": "JURIDICA",
+    "cpfCnpj": "66625514000140",
+    "birthDate": null,
+    "companyType": "MEI",
+    "email": "emaildaempresa@gmail.com",
+    "phone": "11 32300606",
+    "mobilePhone": "11 988451155",
+    "postalCode": "89223005",
+    "address": "Av. Rolf Wiest",
+    "addressNumber": "659",
+    "complement": "Sala 201",
+    "province": "Bom Retiro",
+}
+Após a atualização uma nova análise será realizada.
+
+Prova de vida
+A prova de vida é quando o Asaas confirma que a pessoa que está usando a conta é uma pessoa real e libera o uso de todos os produtos. Inicialmente a conta só estará habilitada para criar cobranças e realizar transferências.
+
+No fluxo de envio de documentos via link, a prova de vida acontece com o processo de envio de uma Selfie e a aprovação, em 90% dos casos, acontece em até 5 minutos.
+
+Introdução
+Atualmente, o Asaas possui dois tipos de subcontas:
+
+Subcontas não-BaaS
+Subcontas BaaS
+Ambos os tipos de subconta são criados através do mesmo endpoint:
+
+POST /api/v3/accounts
+Confira a referência completa deste endpoint
+
+Porém, o processo de ativação e envio de documentos é difere entre elas. Este documento descreve o fluxo detalhado de aprovação de contas para ambos os formatos, incluindo o envio de documentos obrigatórios e o uso correto dos endpoints.
+
+Período de Avaliação Regulatória
+Todos os novos clientes que desejam criar subcontas via API estarão inicialmente sujeitos ao período de avaliação regulatória para serviços na API. Durante esse período obrigatório, as operações de subcontas e cobranças terão limites definidos. Clique aqui e consulte o funcionamento completo.
+
+O Período de avaliação regulatória é um estágio obrigatório, ofertado pelo Asaas para que você tenha todo o suporte para utilizar nossa API seguindo todas as regras dispostas pelo Banco Central, pela Resolução Conjunta nº 16/17. Esse período se inicia a partir da primeira criação de subconta via API.
+
+Limites durante o período:
+
+Máximo de 10 subcontas de diferentes titulares.
+Máximo de R$ 2.000,00 emitidos em cobranças por subconta.
+Vigência de até 60 dias corridos a partir da primeira subconta criada.
+📘
+Importante
+Após atingir qualquer limite (quantidade, valor ou prazo), a criação de novas subcontas e emissão adicional de cobranças, assinaturas, links de pagamento, será automaticamente bloqueada até a finalização do processo de avaliação regulatória (checklists/documentação).
+No novo cenário regulatório, em cada ponto de contato com seu cliente final (telas próprias, comprovantes, onboarding, contratos), é obrigatório evidenciar a marca, os links e os textos de responsabilidade do Asaas. Consulte o Playbook de adequação do Asaas para detalhes, ele será criado e enviado exclusivamente pra você, pelo nosso time de atendimento.
+Fluxo de Aprovação – Subconta Padrão
+Resumo: Subcontas padrão (não-BaaS) possuem acesso à interface do Asaas. Após a criação da conta, o responsável recebe um e-mail para redefinição de senha e segue com o envio de documentos diretamente pela interface.
+
+Fluxo:
+Criação da Subconta
+→ Endpoint: POST /accounts
+→ A conta é criada e validada com a Receita Federal.
+
+Recebimento de E-mail
+→ O responsável pela conta recebe automaticamente um e-mail para redefinir a senha e acessar o painel do Asaas.
+
+Redefinição de Senha
+→ O responsável redefine a senha e realiza o login na interface Asaas.
+
+Envio de Documentos
+→ O envio dos documentos obrigatórios ocorre diretamente pela interface do Asaas.
+→ Normalmente solicitados:
+
+Foto Selfie
+Foto do Documento de Identificação
+Análise e Aprovação
+→ O time de compliance do Asaas realiza a análise dos documentos enviados.
+→ Conta aprovada.
+
+Fluxo de Aprovação – Subconta Baas
+Resumo: Subcontas BaaS não possuem acesso à interface do Asaas. Todo o processo de envio de documentos é realizado via API ou através de um link externo (onboardingUrl), dependendo do tipo de documento.
+
+Fluxo:
+Criação da Subconta
+→ Endpoint: POST /accounts
+→ A conta é criada e inicia-se o processo de validação junto à Receita Federal.
+
+Aguardar 15 segundos
+→ Importante: aguarde no mínimo 15 segundos após a criação da conta antes de realizar verificações de documentos.
+→ Motivo: garantir que a validação e a captação dos dados junto à Receita Federal tenham sido concluídas.
+→ Caso essa espera não seja respeitada, o retorno poderá indicar incorretamente que documentos não obrigatórios sejam enviados.
+
+Verificar Documentos Pendentes
+→ Endpoint: GET /myAccount/documents
+→ Verifica quais documentos precisam ser enviados.
+Confira a referência completa deste endpoint
+
+Analisar Resposta
+→ Por padrão, para Pessoa Física e Pessoa Jurídica (exceto Associações):
+
+Foto Selfie
+Foto do Documento de Identificação
+→ Para Associações:
+
+Além dos documentos acima, Ata de Eleição.
+Verificar atributo onboardingUrl
+→ Se presente no objeto do documento:
+✅ Documento deve ser enviado através do link externo (onboardingUrl).
+❌ Não será aceito o envio via API (POST).
+
+→ Se não presente:
+✅ Documento deve ser enviado via API:
+→ Endpoint: POST /myAccount/documents/{id}
+Confira a referência completa deste endpoint
+
+Envio de Documentos
+
+Com onboardingUrl: link externo
+Sem onboardingUrl: envio via API.
+Análise e Aprovação
+→ O time de compliance do Asaas realiza a análise dos documentos enviados.
+→ Conta aprovada.
+
+🚧
+Importante
+O atributo onboardingUrl determina obrigatoriamente o método de envio do documento.
+
+Nunca tente enviar via API um documento que possui onboardingUrl.
+→ O envio será rejeitado.
+
+❗️
+ATENÇÃO:
+Respeite o timeout mínimo de 15 segundos após a criação da conta antes de verificar documentos pendentes.
+
+Este fluxo garante que o processo de ativação e envio de documentos seja realizado da forma correta e adequada ao tipo de subconta, evitando erros comuns e garantindo a conformidade regulatória.
+
+Criação de subcontas
+⚠️
+Atenção
+Todos os novos clientes que desejam criar subcontas via API estarão inicialmente sujeitos ao período de avaliação regulatória para serviços na API. Durante esse período obrigatório, as operações de subcontas e cobranças terão limites definidos. Clique aqui e consulte o funcionamento completo.
+
+A criação de subcontas permite que você crie contas Asaas para seus parceiros, clientes ou estabelecimentos vinculadas a uma conta raiz. Esse modelo é amplamente utilizado em plataformas White Label, marketplaces, ERPs, sistemas de gestão e outras soluções que desejam oferecer os serviços financeiros do Asaas para múltiplos usuários através de uma única integração.
+
+Após a criação da subconta, o titular poderá utilizar normalmente os recursos disponibilizados pelo Asaas através do site, aplicativo ou por meio de uma plataforma integrada desenvolvida por você.
+
+Como resposta da criação da subconta, você receberá:
+
+A chave de API (apiKey) da subconta criada, necessária para realizar chamadas autenticadas em nome dessa conta.
+O identificador da carteira (walletId), utilizado em recursos como Split de pagamentos e Transferências entre contas Asaas.
+Lembrando que, embora as subcontas criadas sob uma conta raiz possam herdar determinadas configurações administrativas e comerciais, algumas configurações precisam ser realizadas individualmente em cada subconta, como webhooks, informações fiscais para emissão de notas e outras configurações operacionais.
+
+📘
+Importante
+A criação de subcontas pode gerar cobranças de taxas específicas. Consulte Configurações de Conta > Taxas para verificar quais valores se aplicam ao seu contrato.
+
+Quando utilizar subcontas
+A criação de subcontas é indicada quando sua plataforma precisa operar para múltiplos clientes mantendo a separação financeira entre eles.
+
+Alguns exemplos comuns incluem:
+
+Marketplaces que possuem diversos vendedores.
+Plataformas SaaS que oferecem gestão financeira para seus clientes.
+Sistemas White Label.
+ERPs que desejam centralizar a integração financeira dos seus usuários.
+Plataformas que utilizam Split de pagamentos para distribuição automática de valores.
+Cada subconta possui seus próprios clientes, cobranças, transferências, saldo e configurações operacionais.
+
+Fluxo de criação de uma subconta
+Em uma integração típica, a jornada de criação de uma subconta segue o seguinte fluxo:
+
+Text
+
+Criar subconta
+↓
+Receber apiKey e walletId
+↓
+Armazenar a apiKey em local seguro
+↓
+Configurar recursos da subconta
+(webhooks, informações fiscais, etc.)
+↓
+Enviar documentos cadastrais 
+↓
+Utilizar a apiKey da subconta para realizar operações
+Cada etapa possui sua própria finalidade e pode exigir configurações adicionais dependendo do tipo de operação que será realizada posteriormente.
+
+Criação da subconta
+POST /v3/accounts
+Confira a referência completa deste endpoint
+
+JSON
+
+{
+    "name": "Subconta criada via API",
+    "email": "emaildaempresa@gmail.com",
+    "cpfCnpj": "66625514000140",
+    "birthDate": "1994-05-16",
+    "companyType": "MEI",
+    "phone": "11 32300606",
+    "mobilePhone": "11 993367861",
+    "address": "Av. Rolf Wiest",
+    "addressNumber": "277",
+    "complement": "Sala 502",
+    "province": "Bom Retiro",
+    "postalCode": "89223005"
+}
+🚧
+Importante
+Em Sandbox é possível criar até 20 subcontas por dia. Ao atingir esse limite, novas tentativas retornarão erro.
+
+Além disso, as comunicações relacionadas às subcontas em Sandbox são direcionadas para o e-mail da conta raiz.
+
+Ao criar uma subconta, quando ela não é uma conta BaaS, um e-mail de ativação será enviado para o endereço informado durante o cadastro.
+
+Guardando a chave de API da subconta
+As chamadas subsequentes realizadas em nome da subconta deverão utilizar a chave de API retornada na resposta da criação da conta.
+
+A chave de API é disponibilizada apenas neste momento e não poderá ser consultada ou recuperada posteriormente. Por esse motivo, é fundamental armazená-la em um local seguro assim que a subconta for criada.
+
+📘
+Boas práticas
+Armazene a apiKey imediatamente após a criação da subconta.
+Evite exibir a chave em logs ou interfaces administrativas.
+Associe internamente a subconta criada ao cadastro correspondente em sua plataforma.
+Utilize mecanismos seguros para armazenamento de credenciais.
+Configurações que exigem atenção após a criação
+Embora algumas configurações possam ser herdadas da conta raiz, outras precisam ser configuradas individualmente em cada subconta.
+
+Configuração	Necessita configuração na subconta
+Webhooks	Sim
+Informações fiscais para emissão de notas	Sim
+Chave de API	Sim
+Clientes e cobranças	Sim
+Dados cadastrais da conta	Sim
+Caso sua integração utilize recursos como emissão de notas fiscais, notificações automáticas ou webhooks, recomenda-se realizar essas configurações logo após a criação da conta.
+
+Período de avaliação regulatória - O que é?
+O período de avaliação regulatória é uma etapa obrigatória para novas operações de criação de subcontas via API.
+
+Seu objetivo é garantir que a utilização da plataforma esteja em conformidade com os requisitos regulatórios aplicáveis às operações financeiras e às diretrizes estabelecidas pelos órgãos reguladores.
+
+Esse período é iniciado a partir da primeira criação de subconta realizada via API.
+
+Limites durante o período
+Máximo de 10 subcontas de diferentes titulares.
+Máximo de R$ 2.000,00 emitidos em cobranças por subconta.
+Vigência de até 60 dias corridos a partir da primeira subconta criada.
+📘
+Importante
+Após atingir qualquer limite (quantidade, valor ou prazo), a criação de novas subcontas e a emissão adicional de cobranças, assinaturas ou links de pagamento serão bloqueadas até a conclusão do processo de avaliação regulatória.
+
+Restrições importantes
+🚧
+Importante
+Em conformidade com as Resoluções Conjuntas nº 16 e nº 17 do Banco Central para operações de BaaS, a criação de subcontas é permitida apenas para contas de pessoa jurídica (CNPJ). Contas de pessoa física (CPF) não podem criar subcontas.
+
+Próximos passos
+Após criar uma subconta, os próximos conteúdos recomendados são:
+
+Configuração de Webhooks.
+Envio de documentos cadastrais.
+Split de pagamentos.
+Transferências entre contas Asaas.
+Processo de avaliação regulatória.
+
+Confirmação Anual de Dados Comerciais para Subcontas
+O que é?
+A Confirmação Anual de Dados Comerciais é um processo obrigatório onde os dados cadastrais de uma conta precisam ser confirmados ou atualizados anualmente. Este procedimento visa manter a base de dados do Asaas sempre atualizada, conforme as exigências regulatórias.
+
+Por que preciso confirmar os dados comerciais da subconta?
+Esta é uma exigência do Banco Central do Brasil (Bacen). Como Instituição de Pagamento regulamentada, o Asaas deve garantir que os dados cadastrais de todas as contas, incluindo subcontas, estejam sempre precisos e atualizados. A ausência dessa confirmação pode resultar em restrições de uso da API para a subconta afetada.
+
+Como vai funcionar?
+O processo pode ser gerenciado por meio de notificações via Webhook e requer uma ação da sua integração para atualizar os dados da conta quando necessário. Além disso, as informações sobre a expiração dos dados comerciais já são retornadas em algumas rotas de gestão de contas.
+
+As subcontas criadas antes da data (12/06/2025) de implementação desta mudança e que tinham expiração agendada para este ano de 2025 terão a data de expiração dos dados comerciais automaticamente definidas para a última semana de novembro de 2025 pelo Asaas.
+
+Subcontas criadas a partir da data de implementação desta funcionalidade já seguirão o ciclo de expiração anual padrão (um ano após a criação/última atualização).
+
+Essa abordagem visa evitar a necessidade de um esforço imediato de atualização em massa para toda a sua base de subcontas existente, permitindo uma adaptação gradual ao novo requisito.
+
+Verificação Proativa
+Ao criar uma subconta, recuperar os dados comerciais de uma conta ou ao atualizar os dados comerciais, a resposta da API já inclui o objeto commercialInfoExpiration. Este objeto contém os campos:
+
+isExpired (boolean): Indica se os dados comerciais estão expirados.
+scheduledDate (string): Indica a data programada para a expiração dos dados comerciais (ex: "2025-05-05 00:00:00").
+Você pode usar essa informação para se antecipar e programar a atualização antes mesmo do envio do webhook de aviso.
+📘
+Nota sobre Rate Limits:
+Lembre-se que a atualização é anual. Verificações proativas excessivas neste campo podem sobrecarregar sua cota de requisições à API (rate limit). Priorize o uso dos webhooks e, se fizer consultas proativas, faça-as com baixa frequência, ciente de que a data de expiração só muda anualmente ou após uma atualização.
+
+Webhooks
+Os seguintes eventos foram adicionados ao escopo de ACCOUNT_STATUS:
+
+ACCOUNT_STATUS_COMMERCIAL_INFO_EXPIRING_SOON - Indica que os dados comerciais da conta estão próximos da data de expiração e precisam ser confirmados/atualizados.
+ACCOUNT_STATUS_COMMERCIAL_INFO_EXPIRED - Indica que os dados comerciais da conta expiraram e não foram confirmados. Ações na API para esta conta serão restringidas.
+Notificação prévia
+Mesmo com a disponibilidade desses dados na API, 40 dias antes da data limite (scheduledDate) para confirmação dos dados, um evento de Webhook ACCOUNT_STATUS_COMMERCIAL_INFO_EXPIRING_SOON será enviado para a URL configurada. Indicando que os dados comerciais estão próximos de expirar, sendo necessário confirmar ou atualizar.
+
+Notificação de Expiração e Bloqueio
+Caso os dados comerciais não sejam confirmados até a scheduledDate, um novo Webhook com o evento ACCOUNT_STATUS_COMMERCIAL_INFO_EXPIRED será enviado.
+
+🚧
+Importante:
+Ao tentar realizar chamadas para qualquer endpoint da API que esteja bloqueado devido à expiração dos dados comerciais (ou seja, qualquer endpoint diferente dos listados abaixo como acessíveis), sua integração receberá como resposta o código de status HTTP 403 Forbidden. O corpo da resposta de erro incluirá uma mensagem indicando que a ação não pode ser completada devido à pendência na confirmação/atualização dos dados comerciais e a necessidade de regularizá-los para restaurar o acesso.
+
+Para permitir a regularização da pendência, os seguintes endpoints permanecerão acessíveis para a conta, mesmo durante o período de bloqueio:
+
+POST /v3/myAccount/commercialInfo/ (para atualizar os dados)
+GET /v3/myAccount/commercialInfo/ (para consultar os dados atuais)
+
+Após a atualização dos dados comerciais, o acesso às demais funcionalidades da API é restabelecido, isExpired voltará para false e uma nova scheduledDate é definida.
+
+Exemplos dos Eventos de Webhook
+Dados Comerciais Próximos da Expiração:
+
+JSON
+
+{
+   "id":"evt_05b708f961d739ea7eba7e4db318f621&368604920",
+   "event":"ACCOUNT_STATUS_COMMERCIAL_INFO_EXPIRING_SOON",
+   "dateCreated":"2024-05-10 16:45:03",
+   "accountStatus":{
+      "id":"175027c1-029c-41e5-8b9a-e289b9788c33",
+      "commercialInfo":"APPROVED",
+      "bankAccountInfo":"APPROVED",
+      "documentation":"APPROVED",
+      "general":"APPROVED"
+   },
+   "additionalInfo":{
+      "scheduledDate":"2025-06-20"
+   }
+}
+
+Dados Comerciais Expirados:
+
+JSON
+
+{  
+   "id":"evt_05b708f961d739ea7eba7e4db318f621&368604920",  
+   "event":"ACCOUNT_STATUS_COMMERCIAL_INFO_EXPIRED",  
+   "dateCreated":"2024-05-10 02:00:00",  
+   "accountStatus":{  
+      "id":"175027c1-029c-41e5-8b9a-e289b9788c33",  
+      "commercialInfo":"APPROVED",  
+      "bankAccountInfo":"APPROVED",  
+      "documentation":"APPROVED",  
+      "general":"APPROVED"  
+   },  
+   "additionalInfo":{  
+      "scheduledDate":"2025-05-10"  
+   }  
+}
+🚧
+Importante:
+Mesmo quando o evento ACCOUNT_STATUS_COMMERCIAL_INFO_EXPIRED é disparado, os campos commercialInfo e general dentro do objeto accountStatus (conforme exemplificado acima) podem continuar com o valor APPROVED.
+
+Isso ocorre porque a expiração dos dados comerciais para fins de confirmação anual é um processo específico de conformidade e não reflete, necessariamente, uma reprovação do cadastro comercial geral da conta ou de seu status geral de aprovação (que podem ser gerenciados por fluxos de análise distintos e permanecerem válidos). O bloqueio de funcionalidades da API é uma medida operacional para garantir a atualização dos dados.
+
+O indicativo de que os dados comerciais de fato precisam de atualização será o próprio evento ACCOUNT_STATUS_COMMERCIAL_INFO_EXPIRED e, nas chamadas de API subsequentes para consultar os dados da conta, o campo isExpired (dentro do objeto commercialInfoExpiration) estará como true.
+
+Boas práticas
+Como uma boa prática, recomendamos que sua plataforma obtenha os dados comerciais atualizados ou a confirmação da validade dos dados existentes no Asaas diretamente com o titular da subconta. Após obter essa confirmação, sua integração deve submeter esses dados ao Asaas.
+
+Para obter os dados comerciais e apresentar ao dono da subconta, utilize o endpoint:
+GET /v3/myAccount/commercialInfo/
+
+Confira a referencia completa do endpoint.
+
+Para confirmar ou atualizar os dados comerciais da subconta, utilize o endpoint:
+POST /v3/myAccount/commercialInfo/
+
+Confira a referencia completa do endpoint.
+
+🚧
+Importante:
+Lembre-se que este endpoint deve ser chamado no contexto da subconta, ou seja, utilizando a access_token da subconta específica.
+
+📘
+Atenção
+Ao realizar a atualização com sucesso, uma nova scheduledDate será definida no objeto commercialInfoExpiration (retornado na resposta e em consultas futuras) para um ano à frente, e o acesso às funcionalidades da API para aquela subconta permanecerá normal.
+
+Gerenciamento das chaves de API de subcontas
+O Asaas permite que a conta-pai gerencie as chaves de API de suas subcontas através de endpoints específicos. Essa funcionalidade é ideal para parceiros que necessitam recuperar o acesso a subcontas cujas chaves foram perdidas ou expiradas.
+
+Como habilitar o acesso?
+Devido à sensibilidade dessa operação, os endpoints de gerenciamento vêm bloqueados por padrão. Para utilizá-los, é necessário realizar uma liberação temporária através da interface web do Asaas.
+
+Acesse o menu Integrações e clique em Chaves de API.
+Localize a seção Gerenciamento de Chaves de API de Subcontas (visível apenas se você possuir subcontas).
+Clique em "Habilitar acesso".
+🚧
+Atenção
+
+Por questões de segurança, a liberação dos endpoints dura 2 horas. Após esse período, o acesso é revogado automaticamente e, se necessário, você deverá habilitá-lo novamente na interface.
+Esses endpoints só podem ser acessados por seu sistema e caso você tenha a configuração de Whitelist de IP habilitada. Confira mais detalhes sobre a funcionalidade de Whitelist de IP.
+Utilizando os endpoints
+Com o acesso habilitado, você pode realizar as seguintes operações autenticando-se com a chave da conta-pai:
+
+Listar chaves de uma subconta
+Recupere os IDs e dados das chaves ativas de uma subconta específica.
+Ver referência completa da rota
+Criar uma nova chave
+Gera uma nova chave de API para a subconta informada.
+Ver referência completa da rota
+Atualizar ou Excluir uma chave
+Para editar configurações ou excluir (revogar) uma chave, você precisará do id da subconta e do accessTokenId(ID da chave), que pode ser obtido na listagem ou no retorno da criação.
+Ver referência completa das rotas de Atualizar e Excluir chave.

@@ -8,6 +8,7 @@ import 'package:instrutor_em_casa/widgets/avatar.dart';
 import 'package:instrutor_em_casa/widgets/stars.dart';
 import 'package:instrutor_em_casa/widgets/theme.dart';
 import 'package:intl/intl.dart';
+import 'package:ionicons/ionicons.dart';
 
 class UserDetailsScreen extends StatefulWidget {
   const UserDetailsScreen({super.key, required this.usuario, required this.myUser});
@@ -58,6 +59,11 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                     const SizedBox(height: AppSpacing.sm),
                     _buildCategoriesChips(),
                     const SizedBox(height: AppSpacing.xl),
+
+                    _buildSectionTitle("Veículo de Treinamento"),
+                    const SizedBox(height: AppSpacing.sm),
+                    _buildVeiculoCard(),
+                    const SizedBox(height: AppSpacing.xl),
                   ],
 
                   _buildSectionTitle("Avaliações"),
@@ -77,9 +83,54 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   }
 
   Widget _buildSliverAppBar() {
+    final rating = widget.usuario.instrutor?.rating ?? 5.0;
+    final ratingCount = widget.usuario.instrutor?.ratingCount ?? 0;
+    final showFavorite = widget.myUser.type == UserType.aluno && widget.usuario.type == UserType.instrutor;
+
     return SliverAppBar(
       expandedHeight: 200,
       pinned: true,
+      actions: [
+        if (showFavorite)
+          StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection("users")
+                .doc(widget.myUser.id)
+                .collection("favorites")
+                .doc(widget.usuario.id)
+                .snapshots(),
+            builder: (context, snapshot) {
+              final isFav = snapshot.hasData && snapshot.data!.exists;
+              return IconButton(
+                icon: Icon(
+                  isFav ? Ionicons.heart : Ionicons.heart_outline,
+                  color: isFav ? Colors.red : Colors.white,
+                ),
+                onPressed: () async {
+                  final docRef = FirebaseFirestore.instance
+                      .collection("users")
+                      .doc(widget.myUser.id)
+                      .collection("favorites")
+                      .doc(widget.usuario.id);
+
+                  if (isFav) {
+                    await docRef.delete();
+                  } else {
+                    await docRef.set({
+                      "id": widget.usuario.id,
+                      "name": widget.usuario.name,
+                      "image": widget.usuario.image,
+                      "rating": rating,
+                      "ratingCount": ratingCount,
+                      "categories": widget.usuario.instrutor?.categories.map((c) => c.name).toList() ?? [],
+                      "createdAt": FieldValue.serverTimestamp(),
+                    });
+                  }
+                },
+              );
+            },
+          ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           fit: StackFit.expand,
@@ -301,6 +352,75 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           ),
           label: const Text("Solicitar Treinamento", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
           icon: const Icon(Iconsax.calendar_1, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVeiculoCard() {
+    final defaultVehicle = widget.usuario.instrutor?.defaultVehicle;
+
+    if (defaultVehicle == null) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Row(
+            children: [
+              const Icon(Ionicons.car_outline, color: AppColors.textMuted),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "Nenhum veículo cadastrado pelo instrutor.",
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.textMuted,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(15),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primary50,
+                borderRadius: AppRadius.radiusMd,
+              ),
+              child: const Icon(Ionicons.car, color: AppColors.primary600, size: 24),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "${defaultVehicle.brand} ${defaultVehicle.model}",
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Cor: ${defaultVehicle.color} • Categoria: ${defaultVehicle.category}",
+                    style: AppTextStyles.caption.copyWith(fontSize: 12),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    "Combustível: ${defaultVehicle.fuel}",
+                    style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

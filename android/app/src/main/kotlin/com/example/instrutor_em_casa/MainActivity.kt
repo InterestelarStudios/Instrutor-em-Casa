@@ -1,4 +1,4 @@
-package com.example.instrutor_em_casa
+package com.interestelar.instrutor
 
 import io.flutter.embedding.android.FlutterActivity
 

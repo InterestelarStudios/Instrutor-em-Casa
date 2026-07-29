@@ -11,9 +11,12 @@ import 'package:instrutor_em_casa/widgets/chip.dart';
 import 'package:instrutor_em_casa/widgets/dialog_services.dart';
 import 'package:instrutor_em_casa/widgets/theme.dart';
 import 'package:instrutor_em_casa/widgets/user_tile.dart';
+import 'package:flutter/services.dart';
+import 'package:instrutor_em_casa/services/asaas_service.dart';
 import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AulaDetailsScreen extends StatefulWidget {
   const AulaDetailsScreen({super.key, required this.aula, required this.usuario,});
@@ -178,10 +181,42 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
                       resumeRow(title: "Tipo de aula", value: lessonTypeTranslate(aula.type)),
                       resumeRow(title: "Veículo", value: lessonVehicleTranslate(aula.vehicle)),
                       resumeRow(title: "Pagamento", value: aula.paymentType.name.toUpperCase()),
+                      resumeRow(title: "Status do Pagamento", value: getPaymentStatusLabel(aula.paymentStatus)),
+                      if (isInstructor)
+                        resumeRow(
+                          title: "Status da Transferência",
+                          value: aula.transferStatusValue(),
+                          valueColor: aula.transferStatusColor(),
+                        ),
                     ],
                   ),
                 ),
               ),
+              if (aula.instrutor.id != widget.usuario.id &&
+                  (aula.paymentStatus != "CONFIRMED" && aula.paymentStatus != "RECEIVED" && aula.paymentStatus != "RECEIVED_IN_CASH" && aula.paymentStatus != "CONFIRMED_IN_CASH")) ...[
+                const SizedBox(height: 15),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () => _payNow(aula),
+                        child: const Text("Pagar Agora"),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => _changePaymentMethod(aula),
+                        child: const Text("Alterar Método"),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           );
         }
@@ -406,26 +441,42 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
   void _showQrCodeDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Seu Check-in"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("Mostre este QR Code ao instrutor para realizar o check-in da aula."),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 200,
-              width: 200,
-              child: QrImageView(
-                data: aula.id,
-                version: QrVersions.auto,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
+        backgroundColor: AppColors.surface,
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Seu Check-in",
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              const Text(
+                "Mostre este QR Code ao instrutor para realizar o check-in da aula.",
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 200,
+                width: 200,
+                child: QrImageView(
+                  data: aula.id,
+                  version: QrVersions.auto,
+                ),
+              ),
+              const SizedBox(height: 24),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Fechar"),
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Fechar")),
-        ],
       ),
     );
   }
@@ -522,6 +573,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
       aula.horasRestantes -= aula.sessions[index].duration;
       if (aula.horasRestantes <= 0) {
         aula.status = LessonStatus.done;
+        aula.transferStatus = TransferStatus.disponivel;
       }
     }
 
@@ -532,6 +584,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
       "sessions": aula.sessions.map((s) => s.toMap()).toList(),
       "status": aula.status.name,
       "horasRestantes": aula.horasRestantes,
+      "transferStatus": aula.transferStatus.name,
     });
 
     if (start) {
@@ -582,14 +635,14 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
     );
   }
 
-  Widget resumeRow({required String title, required String value}){
+  Widget resumeRow({required String title, required String value, Color? valueColor}){
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Flexible(child: Text(title, style: Theme.of(context).textTheme.bodySmall,)),
-          Flexible(child: Text(value, style: Theme.of(context).textTheme.titleMedium,))
+          Flexible(child: Text(value, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: valueColor),))
         ],
       ),
     );
@@ -650,5 +703,227 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
         ),
       ],
     );
+  }
+
+  String getPaymentStatusLabel(String? status) {
+    if (status == null) return "Aguardando Pagamento";
+    switch (status.toUpperCase()) {
+      case 'PENDING':
+        return "Aguardando Pagamento";
+      case 'RECEIVED':
+      case 'CONFIRMED':
+      case 'RECEIVED_IN_CASH':
+      case 'CONFIRMED_IN_CASH':
+        return "Pago";
+      case 'OVERDUE':
+        return "Vencido";
+      case 'REFUNDED':
+        return "Reembolsado";
+      case 'REFUSED':
+        return "Recusado";
+      case 'CANCELED':
+        return "Cancelado";
+      default:
+        return "Aguardando Pagamento";
+    }
+  }
+
+  Future<void> _payNow(Aula aula) async {
+    if (aula.invoiceUrl == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Link de pagamento indisponível.")),
+      );
+      return;
+    }
+
+    if (aula.paymentType == PaymentType.pix) {
+      await showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
+          backgroundColor: AppColors.surface,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  "Pagamento PIX",
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text("Escaneie o QR Code ou use o link abaixo para pagar:"),
+                const SizedBox(height: 20),
+                Center(
+                  child: SizedBox(
+                    width: 200,
+                    height: 200,
+                    child: QrImageView(
+                      data: aula.invoiceUrl!,
+                      version: QrVersions.auto,
+                      size: 200.0,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: aula.invoiceUrl!));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Link copiado!")),
+                    );
+                  },
+                  child: const Text("Copiar Link de Pagamento"),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Fechar"),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } else {
+      await launchUrl(Uri.parse(aula.invoiceUrl!));
+    }
+  }
+
+  void _changePaymentMethod(Aula aula) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  "Escolha o Método de Pagamento",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Ionicons.qr_code_outline),
+                title: const Text("PIX"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _processChangePayment(aula, PaymentType.pix);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Ionicons.card_outline),
+                title: const Text("Cartão de Crédito"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _processChangePayment(aula, PaymentType.credito);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Ionicons.card_outline),
+                title: const Text("Cartão de Débito"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _processChangePayment(aula, PaymentType.debito);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _processChangePayment(Aula aula, PaymentType newType) async {
+    DialogServices.loading2(context);
+
+    try {
+      String? customerId = widget.usuario.asaasId;
+      if (customerId == null) {
+        final userDoc = await FirebaseFirestore.instance.collection("users").doc(widget.usuario.id).get();
+        customerId = userDoc.data()?['asaasId'];
+        if (customerId == null) {
+          customerId = await AsaasService.createCustomer(widget.usuario);
+          if (customerId == null) throw "Erro ao obter ou criar perfil do cliente no Asaas.";
+          await FirebaseFirestore.instance.collection("users").doc(widget.usuario.id).update({
+            "asaasId": customerId,
+          });
+        }
+      }
+
+      String billingType = 'PIX';
+      if (newType == PaymentType.credito) {
+        billingType = 'CREDIT_CARD';
+      } else if (newType == PaymentType.debito) {
+        billingType = 'UNDEFINED';
+      }
+
+      final payment = await AsaasService.createPayment(
+        aula: aula,
+        customerId: customerId,
+        billingType: billingType,
+      );
+
+      if (payment == null) throw "Erro ao criar novo pagamento no Asaas.";
+
+      final String paymentId = payment['id'];
+      final String invoiceUrl = payment['invoiceUrl'];
+      final String paymentStatus = payment['status'] ?? 'PENDING';
+
+      await FirebaseFirestore.instance.collection("cobrancas").doc(paymentId).set({
+        'id': paymentId,
+        'aulaId': aula.id,
+        'alunoId': widget.usuario.id,
+        'alunoName': widget.usuario.name,
+        'value': payment['value'] ?? aula.price.amount,
+        'billingType': billingType == 'UNDEFINED' ? 'DEBIT_CARD' : billingType,
+        'status': paymentStatus,
+        'invoiceUrl': invoiceUrl,
+        'dueDate': payment['dueDate'],
+        'created': FieldValue.serverTimestamp(),
+      });
+
+      await FirebaseFirestore.instance.collection("aulas").doc(aula.id).update({
+        'paymentId': paymentId,
+        'invoiceUrl': invoiceUrl,
+        'paymentType': newType.name,
+        'paymentStatus': paymentStatus,
+      });
+
+      Navigator.pop(context); // Close loading
+
+      final updatedAula = Aula(
+        id: aula.id,
+        aluno: aula.aluno,
+        instrutor: aula.instrutor,
+        category: aula.category,
+        status: aula.status,
+        date: aula.date,
+        created: aula.created,
+        horasContratadas: aula.horasContratadas,
+        horasRestantes: aula.horasRestantes,
+        sessions: aula.sessions,
+        type: aula.type,
+        vehicle: aula.vehicle,
+        price: aula.price,
+        paymentType: newType,
+        paymentId: paymentId,
+        invoiceUrl: invoiceUrl,
+        paymentStatus: paymentStatus,
+      );
+
+      await _payNow(updatedAula);
+
+    } catch (e) {
+      Navigator.pop(context); // Close loading
+      DialogServices().alertDialog(context, "Erro ao alterar método de pagamento: $e");
+    }
   }
 }

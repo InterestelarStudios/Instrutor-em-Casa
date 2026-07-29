@@ -128,8 +128,20 @@ class _AlunoBaseScreenState extends State<AlunoBaseScreen> {
             controller: pageController,
             physics: const NeverScrollableScrollPhysics(),
             children: [
-              HomeScreenAluno(usuario: widget.usuario, position: position,),
-              AulasAlunoScreen(usuario: widget.usuario,),
+              HomeScreenAluno(
+                usuario: widget.usuario,
+                position: position,
+                onNavigateToTab: (index) {
+                  setState(() {
+                    page = index;
+                    pageController.animateToPage(index, duration: const Duration(milliseconds: 300), curve: Curves.ease);
+                  });
+                },
+              ),
+              AulasAlunoScreen(
+                usuario: widget.usuario,
+                position: position,
+              ),
               ConversasScreen(usuario: widget.usuario,),
               ProfileScreen(usuario: widget.usuario),
             ],

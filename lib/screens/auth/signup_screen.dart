@@ -23,6 +23,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final controllerBirth = TextEditingController();
   final controllerCPF = TextEditingController();
   final controllerPhone = TextEditingController();
+  final controllerCEP = TextEditingController();
   final controllerEmail = TextEditingController();
   final controllerPass = TextEditingController();
   bool obscurePass = true;
@@ -103,6 +104,23 @@ class _SignupScreenState extends State<SignupScreen> {
                 ],
                 keyboardType: TextInputType.number,
                 validator: (text)=> validateBirthDate(text),
+              ),
+              const SizedBox(height: 10,),
+              TextFormField(
+                enabled: !loading,
+                controller: controllerCEP,
+                decoration: InputDecoration(
+                  labelText: "CEP (Obrigatório)",
+                  prefixIcon: Icon(Ionicons.location_outline),
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  CepInputFormatter(),
+                ],
+                keyboardType: TextInputType.number,
+                validator: (text){
+                  return text!.length < 10 ? "CEP inválido" : null;
+                },
               ),
               const SizedBox(height: 10,),
               TextFormField(
@@ -192,14 +210,15 @@ class _SignupScreenState extends State<SignupScreen> {
                       setState(() {
                         loading = !loading;
                       });
-                      final birth = controllerBirth.text.split("/").map((e)=> int.parse(e)).toList();
+                      final birthParts = controllerBirth.text.split("/");
                       final usuario = Usuario(
                         id: "",
                         name: controllerName.text.trim(),
                         data: UserData(
-                          birth: Timestamp.fromDate(DateTime(birth.last, birth[1], birth.first)),
+                          birth: Timestamp.fromDate(DateTime(int.parse(birthParts.last), int.parse(birthParts[1]), int.parse(birthParts.first))),
                           cpf: controllerCPF.text.replaceAll(RegExp(r'[^0-9]'), ''),
                           phone: controllerPhone.text.replaceAll(RegExp(r'[^0-9]'), ''),
+                          postalCode: controllerCEP.text.replaceAll(RegExp(r'[^0-9]'), ''),
                           genre: genre!,
                         ),
                         created: Timestamp.now(),
@@ -270,12 +289,18 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   String? validateBirthDate(String? text){
-    if(text!.length < 10){
+    if(text == null || text.length < 10){
       return "Data inválida";
     }
 
-    if(Timestamp.now().toDate().year - int.parse(text.split("/").last) < 18){
-      return "Você precisa ter 18 anos para se cadastrar.";
+    try {
+      final parts = text.split("/");
+      final birthYear = int.parse(parts.last);
+      if(Timestamp.now().toDate().year - birthYear < 18){
+        return "Você precisa ter 18 anos para se cadastrar.";
+      }
+    } catch (e) {
+      return "Data inválida";
     }
 
     return null;

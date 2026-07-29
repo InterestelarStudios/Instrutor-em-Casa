@@ -23,7 +23,6 @@ class Usuario {
   String? inLesson;
   int notificationsCount;
   String? asaasId;
-  String? walletId;
   PendingAvaliation? pendingAvaliation;
   String? about;
 
@@ -41,7 +40,6 @@ class Usuario {
     this.inLesson,
     this.notificationsCount = 0,
     this.asaasId,
-    this.walletId,
     this.pendingAvaliation,
     this.about,
   });
@@ -70,7 +68,6 @@ class Usuario {
       'inLesson' : inLesson,
       'notificationsCount' : notificationsCount,
       'asaasId' : asaasId,
-      'walletId' : walletId,
       'pendingAvaliation' : pendingAvaliation?.toMap(),
       'about' : about,
     };
@@ -91,7 +88,6 @@ class Usuario {
       inLesson: map['inLesson'] as String?,
       notificationsCount: map['notificationsCount'] as int? ?? 0,
       asaasId: map['asaasId'] as String?,
-      walletId: map['walletId'] as String?,
       pendingAvaliation: map['pendingAvaliation'] != null ? PendingAvaliation.fromMap(map['pendingAvaliation'] as Map<String,dynamic>) : null,
       about: map['about'] as String?,
     );
@@ -108,12 +104,14 @@ class UserData {
   Timestamp birth;
   String cpf;
   String phone;
+  String? postalCode;
   UserGenre genre;
   
   UserData({
     required this.birth,
     required this.cpf,
     required this.phone,
+    this.postalCode,
     required this.genre,
   });
 
@@ -123,6 +121,7 @@ class UserData {
       'birth': birth,
       'cpf': cpf,
       'phone': phone,
+      'postalCode': postalCode,
       'genre': genre.name,
     };
   }
@@ -132,6 +131,7 @@ class UserData {
       birth: map['birth'] as Timestamp,
       cpf: map['cpf'] as String,
       phone: map['phone'] as String,
+      postalCode: map['postalCode'] as String?,
       genre: UserGenre.values.where((e)=> e.name == map['genre']).first,
     );
   }

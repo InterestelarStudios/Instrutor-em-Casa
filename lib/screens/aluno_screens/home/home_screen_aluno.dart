@@ -9,6 +9,7 @@ import 'package:instrutor_em_casa/models/aula.dart';
 import 'package:instrutor_em_casa/models/usuario.dart';
 import 'package:instrutor_em_casa/screens/aluno_screens/buscar_instrutores/buscar_instrutores.dart';
 import 'package:instrutor_em_casa/screens/aula_details/aula_details_screen.dart';
+import 'package:instrutor_em_casa/screens/profile/horas_direcao_screen.dart';
 import 'package:instrutor_em_casa/widgets/active_lesson_widget.dart';
 import 'package:instrutor_em_casa/widgets/loading_box.dart';
 import 'package:instrutor_em_casa/widgets/theme.dart';
@@ -16,9 +17,10 @@ import 'package:ionicons/ionicons.dart';
 import 'package:iconsax/iconsax.dart';
 
 class HomeScreenAluno extends StatefulWidget {
-  const HomeScreenAluno({super.key, required this.usuario, required this.position});
+  const HomeScreenAluno({super.key, required this.usuario, required this.position, this.onNavigateToTab});
   final Usuario usuario;
   final Position? position;
+  final ValueChanged<int>? onNavigateToTab;
 
   @override
   State<HomeScreenAluno> createState() => _HomeScreenAlunoState();
@@ -141,6 +143,14 @@ class _HomeScreenAlunoState extends State<HomeScreenAluno> with AutomaticKeepAli
                 label: "Horas Realizadas",
                 value: "$completedHours h",
                 color: AppColors.primary,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HorasDirecaoScreen(usuario: widget.usuario),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: AppSpacing.md),
@@ -150,6 +160,9 @@ class _HomeScreenAlunoState extends State<HomeScreenAluno> with AutomaticKeepAli
                 label: "Pacotes Ativos",
                 value: "$activePackages",
                 color: AppColors.success,
+                onTap: () {
+                  widget.onNavigateToTab?.call(1);
+                },
               ),
             ),
           ],
@@ -158,23 +171,26 @@ class _HomeScreenAlunoState extends State<HomeScreenAluno> with AutomaticKeepAli
     );
   }
 
-  Widget _statCard({required IconData icon, required String label, required String value, required Color color}) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.cardPadding),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.radiusLg,
-        border: Border.all(color: AppColors.border),
-        boxShadow: AppShadows.sm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 12),
-          Text(label, style: AppTextStyles.caption),
-          Text(value, style: AppTextStyles.h2.copyWith(fontSize: 20)),
-        ],
+  Widget _statCard({required IconData icon, required String label, required String value, required Color color, VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.cardPadding),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadius.radiusLg,
+          border: Border.all(color: AppColors.border),
+          boxShadow: AppShadows.sm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 12),
+            Text(label, style: AppTextStyles.caption),
+            Text(value, style: AppTextStyles.h2.copyWith(fontSize: 20)),
+          ],
+        ),
       ),
     );
   }
@@ -244,9 +260,6 @@ class _HomeScreenAlunoState extends State<HomeScreenAluno> with AutomaticKeepAli
     final categories = [
       {'name': 'A', 'label': 'Moto', 'icon': Ionicons.bicycle},
       {'name': 'B', 'label': 'Carro', 'icon': Ionicons.car},
-      {'name': 'C', 'label': 'Caminhão', 'icon': Ionicons.bus},
-      {'name': 'D', 'label': 'Ônibus', 'icon': Icons.directions_bus_rounded},
-      {'name': 'E', 'label': 'Carreta', 'icon': Icons.local_shipping_rounded},
     ];
 
     return SizedBox(

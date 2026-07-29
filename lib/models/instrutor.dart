@@ -1,70 +1,76 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
 
+import 'package:instrutor_em_casa/models/vehicle.dart';
+
 enum CNHCategory {A, B, C, D, E}
 
 class InstrutorData {
 
   bool active;
-  UserDocument cnh;
   UserDocument credencial;
   UserDocument face;
   List<CNHCategory> categories;
   String? about;
   num aulas;
   num horas;
-  String? asaasApiKey;
   String? asaasStatus;
   num rating;
   int ratingCount;
+  Vehicle? defaultVehicle;
+  String? pixKeyType;
+  String? pixKey;
   
   InstrutorData({
     required this.active,
-    required this.cnh,
     required this.credencial,
     required this.face,
     required this.categories,
     this.about,
     required this.aulas,
     required this.horas,
-    this.asaasApiKey,
     this.asaasStatus,
     this.rating = 5.0,
     this.ratingCount = 0,
+    this.defaultVehicle,
+    this.pixKeyType,
+    this.pixKey,
   });
 
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'active': active,
-      'cnh': cnh.toMap(),
       'credencial': credencial.toMap(),
       'face': face.toMap(),
       'categories': categories.map((x) => x.name).toList(),
       'about': about,
       'aulas': aulas,
       'horas': horas,
-      'asaasApiKey': asaasApiKey,
       'asaasStatus': asaasStatus,
       'rating': rating,
       'ratingCount': ratingCount,
+      'defaultVehicle': defaultVehicle?.toMap(),
+      'pixKeyType': pixKeyType,
+      'pixKey': pixKey,
     };
   }
 
   factory InstrutorData.fromMap(Map<String, dynamic> map) {
     return InstrutorData(
       active: map['active'] as bool,
-      cnh: UserDocument.fromMap(map['cnh'] as Map<String,dynamic>),
       credencial: UserDocument.fromMap(map['credencial'] as Map<String,dynamic>),
       face: UserDocument.fromMap(map['face'] as Map<String,dynamic>),
       categories: map['categories'].map<CNHCategory>((value)=> CNHCategory.values.where((e)=> e.name == value).first).toList(),
       about: map['about'] != null ? map['about'] as String : null,
       aulas: map['aulas'] as num,
       horas: map['horas'] as num,
-      asaasApiKey: map['asaasApiKey'] as String?,
       asaasStatus: map['asaasStatus'] as String?,
       rating: map['rating'] as num? ?? 5.0,
       ratingCount: map['ratingCount'] as int? ?? 0,
+      defaultVehicle: map['defaultVehicle'] != null ? Vehicle.fromMap(map['defaultVehicle'] as Map<String, dynamic>) : null,
+      pixKeyType: map['pixKeyType'] as String?,
+      pixKey: map['pixKey'] as String?,
     );
   }
 

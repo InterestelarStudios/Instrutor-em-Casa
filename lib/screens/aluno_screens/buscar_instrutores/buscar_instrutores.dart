@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:instrutor_em_casa/models/instrutor.dart';
 import 'package:instrutor_em_casa/models/usuario.dart';
 import 'package:instrutor_em_casa/screens/user_details/user_details.dart';
 import 'package:instrutor_em_casa/widgets/avatar.dart';
@@ -32,6 +33,25 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
   double radius = 10; // Default radius in Km
   String? selectedCategory;
 
+  String _getHourPriceRange(Usuario instrutor) {
+    if (selectedCategory != null) {
+      return selectedCategory == 'A' ? '90' : '120';
+    }
+    final categories = instrutor.instrutor?.categories ?? [];
+    if (categories.isEmpty) return '120';
+    
+    final hasCatA = categories.contains(CNHCategory.A);
+    final hasOthers = categories.any((c) => c != CNHCategory.A);
+    
+    if (hasCatA && hasOthers) {
+      return '90 - 120';
+    } else if (hasCatA) {
+      return '90';
+    } else {
+      return '120';
+    }
+  }
+
   Stream<List<DocumentSnapshot<Map<String, dynamic>>>> addListenersInstrutores() {
     // 1. Centro da busca
     final GeoFirePoint center = GeoFirePoint(GeoPoint(widget.position.latitude, widget.position.longitude));
@@ -52,7 +72,9 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
       geopointFrom: geopointFrom,
       strictMode: true,
       queryBuilder: (query) {
-        var filtrada = query.where('type', isEqualTo: "instrutor");
+        var filtrada = query
+            .where('type', isEqualTo: "instrutor")
+            .where('instrutor.active', isEqualTo: true);
         
         if (selectedCategory != null) {
           filtrada = filtrada.where('instrutor.categories', arrayContains: selectedCategory);
@@ -312,7 +334,10 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
                                             const SizedBox(height: 10,),
                                             Row(
                                               children: [
-                                                Text("R\$50", style: Theme.of(context).textTheme.titleLarge,),
+                                                Text(
+                                                  "R\$${_getHourPriceRange(instrutor)}",
+                                                  style: Theme.of(context).textTheme.titleLarge,
+                                                ),
                                                 Text("/h",  style: Theme.of(context).textTheme.bodySmall,),
                                                 Expanded(child: SizedBox()),
                                                 Icon(Ionicons.location, color: AppColors.textMuted, size: 15,),
@@ -396,7 +421,7 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
   }
 
   Widget _buildCategoryFilter() {
-    final categories = ['A', 'B', 'C', 'D', 'E'];
+    final categories = ['A', 'B'];
     return SizedBox(
       height: 45,
       child: ListView.separated(

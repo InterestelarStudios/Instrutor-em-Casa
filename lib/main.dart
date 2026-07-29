@@ -9,9 +9,7 @@ import 'package:instrutor_em_casa/widgets/theme.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await BackgroundLocationService.initializeService();
   await NotificationService.initialize();
@@ -27,7 +25,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       debugShowCheckedModeBanner: false,
-      
+
       theme: AppThemeData.light,
       locale: Locale("pt", "BR"),
       home: const BaseScreen(),

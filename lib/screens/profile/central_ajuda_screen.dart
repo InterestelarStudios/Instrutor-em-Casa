@@ -6,7 +6,8 @@ class CentralAjudaScreen extends StatelessWidget {
   const CentralAjudaScreen({super.key});
 
   final String emailSuporte = "suporte@instrutoremcasa.com.br";
-  final String whatsappSuporte = "5511999999999"; // Substituir pelo número real
+  final String whatsappSuporte = "5592991185307"; // Número atualizado
+  final String telefoneSuporte = "92991185307";
 
   Future<void> _launchEmail() async {
     final Uri emailLaunchUri = Uri(
@@ -23,6 +24,13 @@ class CentralAjudaScreen extends StatelessWidget {
     final String url = "https://wa.me/$whatsappSuporte?text=Olá, preciso de ajuda com o app Instrutor em Casa.";
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _launchPhone() async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: telefoneSuporte);
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
     }
   }
 
@@ -62,9 +70,23 @@ class CentralAjudaScreen extends StatelessWidget {
           Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
             child: ListTile(
-              onTap: _launchEmail,
+              onTap: _launchPhone,
               leading: const CircleAvatar(
                 backgroundColor: Colors.blue,
+                child: Icon(Ionicons.call_outline, color: Colors.white),
+              ),
+              title: const Text("Ligar agora"),
+              subtitle: const Text("(92) 99118-5307"),
+              trailing: const Icon(Icons.chevron_right),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Card(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            child: ListTile(
+              onTap: _launchEmail,
+              leading: const CircleAvatar(
+                backgroundColor: Colors.grey,
                 child: Icon(Ionicons.mail_outline, color: Colors.white),
               ),
               title: const Text("E-mail"),

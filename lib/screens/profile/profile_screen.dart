@@ -7,7 +7,10 @@ import 'package:instrutor_em_casa/screens/profile/change_email_screen.dart';
 import 'package:instrutor_em_casa/screens/profile/change_password_screen.dart';
 import 'package:instrutor_em_casa/screens/profile/delete_account_screen.dart';
 import 'package:instrutor_em_casa/screens/profile/edit_profile_screen.dart';
+import 'package:instrutor_em_casa/screens/profile/favoritos_screen.dart';
 import 'package:instrutor_em_casa/screens/profile/my_documents_screen.dart';
+import 'package:instrutor_em_casa/screens/profile/historico_cobrancas_screen.dart';
+import 'package:instrutor_em_casa/screens/profile/horas_direcao_screen.dart';
 import 'package:instrutor_em_casa/screens/profile/termos_politicas_screen.dart';
 import 'package:instrutor_em_casa/widgets/avatar.dart';
 import 'package:instrutor_em_casa/widgets/dialog_services.dart';
@@ -39,14 +42,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 UserAvatar(user: widget.usuario.toDetails()),
                 Expanded(
                   child: ListTile(
-                    title: Text(widget.usuario.name, style: Theme.of(context).textTheme.displaySmall, maxLines: 1,),
+                    title: Text(
+                      widget.usuario.name,
+                      style: Theme.of(context).textTheme.displaySmall,
+                      maxLines: 1,
+                    ),
                     subtitle: Row(
                       children: [
-                        StarRating(stars: 4.2, size: 15,).build(context),
-                        const SizedBox(width: 10,),
-                        Text("4.2", style: Theme.of(context).textTheme.titleSmall,),
-                        const SizedBox(width: 5,),
-                        Text("(8 aulas)", style: Theme.of(context).textTheme.bodySmall,)
+                        StarRating(stars: 4.2, size: 15).build(context),
+                        const SizedBox(width: 10),
+                        Text(
+                          "4.2",
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          "(8 aulas)",
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                       ],
                     ),
                   ),
@@ -59,28 +72,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ListTile(
           leading: Icon(Ionicons.pencil_outline),
           title: Text("Editar Perfil"),
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EditProfileScreen(usuario: widget.usuario))),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EditProfileScreen(usuario: widget.usuario),
+            ),
+          ),
         ),
         ListTile(
           leading: Icon(Ionicons.document_outline),
           title: Text("Meus Documentos"),
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MyDocumentsScreen(usuario: widget.usuario))),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MyDocumentsScreen(usuario: widget.usuario),
+            ),
+          ),
         ),
         ListTile(
           leading: Icon(Ionicons.key_outline),
           title: Text("Alterar Senha"),
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+          ),
         ),
         ListTile(
           leading: Icon(Ionicons.mail_outline),
           title: Text("Alterar E-mail"),
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangeEmailScreen())),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChangeEmailScreen()),
+          ),
         ),
         title("Aulas"),
         if (isAluno) ...[
           ListTile(
-            leading: Icon(Ionicons.time_outline),
-            title: Text("Horas de direção"),
+            leading: const Icon(Ionicons.time_outline),
+            title: const Text("Horas de direção"),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => HorasDirecaoScreen(usuario: widget.usuario),
+              ),
+            ),
           ),
         ],
         ListTile(
@@ -89,8 +124,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         if (isAluno) ...[
           ListTile(
-            leading: Icon(Ionicons.heart_outline),
-            title: Text("Instrutores Favoritos"),
+            leading: const Icon(Ionicons.heart_outline),
+            title: const Text("Instrutores Favoritos"),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => FavoritosScreen(usuario: widget.usuario),
+              ),
+            ),
           ),
         ],
         title("Pagamentos"),
@@ -99,19 +140,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
           title: Text("Meus cartões"),
         ),
         ListTile(
-          leading: Icon(Ionicons.receipt_outline),
-          title: Text("Histórico de Cobranças"),
+          leading: const Icon(Ionicons.receipt_outline),
+          title: const Text("Histórico de Cobranças"),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => HistoricoCobrancasScreen(usuario: widget.usuario),
+            ),
+          ),
         ),
         title("Suporte"),
         ListTile(
           leading: Icon(Ionicons.help_outline),
           title: Text("Central de Ajuda"),
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CentralAjudaScreen())),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CentralAjudaScreen()),
+          ),
         ),
         ListTile(
           leading: Icon(Ionicons.information_circle_outline),
           title: Text("Termos e Políticas"),
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TermosPoliticasScreen())),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TermosPoliticasScreen()),
+          ),
         ),
         ListTile(
           leading: Icon(Ionicons.phone_portrait_outline),
@@ -119,7 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         title("Conta"),
         ListTile(
-          onTap: (){
+          onTap: () {
             DialogServices().alertDialog(
               context,
               "Deseja Encerrar sua sessão?",
@@ -128,34 +181,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
               buttonTitle2: "Cancelar",
               colorButton1: Colors.black,
               colorButton2: Colors.grey,
-              onTap2: ()=> Navigator.pop(context),
-              onTap1: (){
+              onTap2: () => Navigator.pop(context),
+              onTap1: () {
                 Navigator.pop(context);
-                FirebaseAuth.instance.signOut()
-                .then((_){
+                FirebaseAuth.instance.signOut().then((_) {
                   Navigator.pushAndRemoveUntil(
                     // ignore: use_build_context_synchronously
                     context,
-                    MaterialPageRoute(builder: (_)=> BaseScreen()),
-                    (predicate)=> false
+                    MaterialPageRoute(builder: (_) => BaseScreen()),
+                    (predicate) => false,
                   );
                 });
-              }
+              },
             );
           },
           title: Text("Encerrar Sessão"),
           leading: Icon(Ionicons.log_out_outline),
         ),
         ListTile(
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DeleteAccountScreen(usuario: widget.usuario))),
-          leading: Icon(Ionicons.phone_portrait_outline, color: AppColors.emergency),
-          title: Text("Excluir Conta", style: TextStyle(color: AppColors.emergency),),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DeleteAccountScreen(usuario: widget.usuario),
+            ),
+          ),
+          leading: Icon(
+            Ionicons.phone_portrait_outline,
+            color: AppColors.emergency,
+          ),
+          title: Text(
+            "Excluir Conta",
+            style: TextStyle(color: AppColors.emergency),
+          ),
         ),
       ],
     );
   }
 
-  Widget title(String text){
+  Widget title(String text) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Text(text, style: Theme.of(context).textTheme.bodySmall),

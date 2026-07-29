@@ -59,7 +59,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        _buildDocumentTile(context, "CNH", instrutor.cnh, DocumentType.cnh),
+
         _buildDocumentTile(context, "Credencial", instrutor.credencial, DocumentType.credencial),
         _buildDocumentTile(context, "Selfie de Identificação", instrutor.face, DocumentType.face),
         const SizedBox(height: 20),

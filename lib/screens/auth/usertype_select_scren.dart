@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:instrutor_em_casa/models/usuario.dart';
 import 'package:instrutor_em_casa/screens/auth/instrutor_pick_documents.dart';
+import 'package:instrutor_em_casa/screens/base_screen.dart';
+import 'package:ionicons/ionicons.dart';
 
 class UserTypeSelectScreen extends StatefulWidget {
   const UserTypeSelectScreen({super.key});
@@ -23,12 +25,44 @@ class _UserTypeSelectScreenState extends State<UserTypeSelectScreen> {
         opacity: opacity,
         duration: const Duration(milliseconds: 500),
         child: Scaffold(
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            actions: [
+              PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'logout') {
+                    await FirebaseAuth.instance.signOut();
+                    if (context.mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => const BaseScreen()),
+                        (route) => false,
+                      );
+                    }
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'logout',
+                    child: Row(
+                      children: [
+                        Icon(Ionicons.log_out_outline, color: Colors.red, size: 20),
+                        SizedBox(width: 10),
+                        Text("Sair", style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
+                icon: const Icon(Ionicons.ellipsis_vertical),
+              ),
+            ],
+          ),
           body: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 80,),
                 Text(
                   "Como você quer usar o app?",
                   style: Theme.of(context).textTheme.displayLarge,

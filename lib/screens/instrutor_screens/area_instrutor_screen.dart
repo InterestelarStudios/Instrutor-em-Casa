@@ -10,6 +10,7 @@ import 'package:instrutor_em_casa/services/firestore_upload_files.dart';
 import 'package:instrutor_em_casa/widgets/chip.dart';
 import 'package:instrutor_em_casa/widgets/dialog_services.dart';
 import 'package:instrutor_em_casa/widgets/theme.dart';
+import 'package:instrutor_em_casa/screens/instrutor_screens/gerenciar_veiculos_screen.dart';
 import 'package:ionicons/ionicons.dart';
 
 class AreaInstrutorScreen extends StatefulWidget {
@@ -22,16 +23,17 @@ class AreaInstrutorScreen extends StatefulWidget {
 
 class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
   bool active = false;
-  late DocumentStatus? cnhStatus;
+
   late DocumentStatus? credencialStatus;
   late DocumentStatus? faceStatus;
   late List<CNHCategory> selectedCategories;
+  final _pixFormKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
     active = widget.usuario.instrutor?.active ?? false;
-    cnhStatus = widget.usuario.instrutor?.cnh.status;
+
     credencialStatus = widget.usuario.instrutor?.credencial.status;
     faceStatus = widget.usuario.instrutor?.face.status;
     selectedCategories = List.from(widget.usuario.instrutor?.categories ?? []);
@@ -39,28 +41,173 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Área do Instrutor"),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.pagePadding),
-        children: [
-          _buildStatusOnline(),
-          const SizedBox(height: AppSpacing.sectionGap),
-          _buildSectionTitle("Categorias"),
-          _buildCategoriasCard(),
-          const SizedBox(height: AppSpacing.sectionGap),
-          _buildSectionTitle("Área de Atuação"),
-          _buildLocalizacaoCard(),
-          const SizedBox(height: AppSpacing.sectionGap),
-          _buildSectionTitle("Documentos"),
-          _buildDocumentoItem("CNH", cnhStatus, DocumentType.cnh),
-          const SizedBox(height: AppSpacing.itemGap),
-          _buildDocumentoItem("Credencial de Instrutor", credencialStatus, DocumentType.credencial),
-          const SizedBox(height: AppSpacing.itemGap),
-          _buildDocumentoItem("Foto do seu Rosto", faceStatus, DocumentType.id),
-        ],
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection("users")
+          .doc(widget.usuario.id)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final liveUser = Usuario.fromMap(snapshot.data!.data()!);
+
+        // Sincroniza estados com base na escuta ativa
+        active = liveUser.instrutor?.active ?? false;
+        credencialStatus = liveUser.instrutor?.credencial.status;
+        faceStatus = liveUser.instrutor?.face.status;
+        selectedCategories = List.from(liveUser.instrutor?.categories ?? []);
+
+        return Scaffold(
+          appBar: AppBar(title: const Text("Área do Instrutor")),
+          body: ListView(
+            padding: const EdgeInsets.all(AppSpacing.pagePadding),
+            children: [
+              _buildStatusOnline(liveUser),
+              const SizedBox(height: AppSpacing.sectionGap),
+              _buildSectionTitle("Categorias"),
+              _buildCategoriasCard(),
+              const SizedBox(height: AppSpacing.sectionGap),
+              _buildSectionTitle("Área de Atuação"),
+              _buildLocalizacaoCard(),
+              const SizedBox(height: AppSpacing.sectionGap),
+
+              // Veículo Padrão e Gerenciamento
+              _buildVeiculoHeader(liveUser),
+              const SizedBox(height: AppSpacing.sm),
+              _buildVeiculoCard(liveUser),
+              const SizedBox(height: AppSpacing.sectionGap),
+
+              _buildSectionTitle("Dados de Transferência"),
+              _buildPixCard(liveUser),
+              const SizedBox(height: AppSpacing.sectionGap),
+
+              _buildSectionTitle("Documentos"),
+              _buildDocumentoItem(
+                "Credencial de Instrutor",
+                credencialStatus,
+                DocumentType.credencial,
+              ),
+              const SizedBox(height: AppSpacing.itemGap),
+              _buildDocumentoItem(
+                "Foto do seu Rosto",
+                faceStatus,
+                DocumentType.id,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildVeiculoHeader(Usuario liveUser) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          "Veículo Padrão",
+          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+        ),
+        TextButton.icon(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    GerenciarVeiculosScreen(usuario: liveUser),
+              ),
+            );
+          },
+          icon: const Icon(Icons.settings_outlined, size: 16),
+          label: const Text("Gerenciar Veículos"),
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            padding: EdgeInsets.zero,
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVeiculoCard(Usuario liveUser) {
+    final defaultVehicle = liveUser.instrutor?.defaultVehicle;
+
+    if (defaultVehicle == null) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Icon(Ionicons.car_outline, color: AppColors.textMuted, size: 40),
+              const SizedBox(height: 10),
+              Text(
+                "Nenhum veículo selecionado",
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "Cadastre um veículo para utilizar em suas aulas práticas.",
+                textAlign: TextAlign.center,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary50,
+                borderRadius: AppRadius.radiusMd,
+              ),
+              child: Icon(Ionicons.car, color: AppColors.primary600, size: 28),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "${defaultVehicle.brand} ${defaultVehicle.model}",
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Placa: ${defaultVehicle.plate} • Cor: ${defaultVehicle.color}",
+                    style: AppTextStyles.caption.copyWith(fontSize: 12),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    "Categoria: ${defaultVehicle.category} • ${defaultVehicle.fuel}",
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -75,7 +222,7 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
     );
   }
 
-  Widget _buildStatusOnline() {
+  Widget _buildStatusOnline(Usuario liveUser) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.cardPadding),
@@ -88,7 +235,9 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
                   Text("Status Online", style: AppTextStyles.h3),
                   Text(
                     "Ative para começar a receber proposta de aulas.",
-                    style: AppTextStyles.body.copyWith(color: AppColors.textMuted),
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ],
               ),
@@ -98,10 +247,15 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
               onChanged: (value) {
                 if (value) {
                   List<String> errors = [];
-                  if (cnhStatus != DocumentStatus.approved) errors.add("CNH não aprovada");
-                  if (credencialStatus != DocumentStatus.approved) errors.add("Credencial não aprovada");
-                  if (faceStatus != DocumentStatus.approved) errors.add("Foto do rosto não aprovada");
-                  if (selectedCategories.isEmpty) errors.add("Nenhuma categoria de aula selecionada");
+
+                  if (credencialStatus != DocumentStatus.approved)
+                    errors.add("Credencial não aprovada");
+                  if (faceStatus != DocumentStatus.approved)
+                    errors.add("Foto do rosto não aprovada");
+                  if (selectedCategories.isEmpty)
+                    errors.add("Nenhuma categoria de aula selecionada");
+                  if (liveUser.instrutor?.defaultVehicle == null)
+                    errors.add("Nenhum veículo cadastrado/selecionado");
 
                   if (errors.isNotEmpty) {
                     showDialog(
@@ -146,11 +300,18 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
         leading: Icon(Icons.smartphone_outlined, color: AppColors.primary),
         title: const Text("Categorias de Aula"),
         subtitle: Text(
-          selectedCategories.isEmpty 
-            ? "Toque para alterar" 
-            : "Categorias: ${selectedCategories.map((e) => e.name).join(', ')}"
+          selectedCategories.isEmpty
+              ? "Toque para alterar"
+              : "Categorias: ${selectedCategories.map((e) => e.name).join(', ')}",
         ),
-        trailing: Icon(selectedCategories.isEmpty ? Icons.info_outline : Icons.check_circle_outline, color: selectedCategories.isEmpty ? AppColors.warning500 : AppColors.success),
+        trailing: Icon(
+          selectedCategories.isEmpty
+              ? Icons.info_outline
+              : Icons.check_circle_outline,
+          color: selectedCategories.isEmpty
+              ? AppColors.warning500
+              : AppColors.success,
+        ),
         onTap: _showCategoriesDialog,
       ),
     );
@@ -167,21 +328,28 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
               title: const Text("Categorias de Aula"),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: CNHCategory.values.map((category) {
-                  return CheckboxListTile(
-                    title: Text("Categoria ${category.name}"),
-                    value: tempCategories.contains(category),
-                    onChanged: (value) {
-                      setDialogState(() {
-                        if (value == true) {
-                          tempCategories.add(category);
-                        } else {
-                          tempCategories.remove(category);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
+                children: CNHCategory.values
+                    .where(
+                      (category) =>
+                          category == CNHCategory.A ||
+                          category == CNHCategory.B,
+                    )
+                    .map((category) {
+                      return CheckboxListTile(
+                        title: Text("Categoria ${category.name}"),
+                        value: tempCategories.contains(category),
+                        onChanged: (value) {
+                          setDialogState(() {
+                            if (value == true) {
+                              tempCategories.add(category);
+                            } else {
+                              tempCategories.remove(category);
+                            }
+                          });
+                        },
+                      );
+                    })
+                    .toList(),
               ),
               actions: [
                 TextButton(
@@ -193,14 +361,16 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
                     setState(() {
                       selectedCategories = List.from(tempCategories);
                     });
-                    
+
                     await FirebaseFirestore.instance
                         .collection("users")
                         .doc(widget.usuario.id)
                         .update({
-                          "instrutor.categories": selectedCategories.map((e) => e.name).toList()
+                          "instrutor.categories": selectedCategories
+                              .map((e) => e.name)
+                              .toList(),
                         });
-                        
+
                     if (mounted) Navigator.pop(context);
                   },
                   child: const Text("Salvar"),
@@ -218,20 +388,29 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
       child: ListTile(
         leading: Icon(Ionicons.map_outline, color: AppColors.primary),
         title: const Text("Localização"),
-        subtitle: const Text("Tarumã, Amazonas"), // Placeholder or reverse geocoding result
+        subtitle: const Text(
+          "Tarumã, Amazonas",
+        ), // Placeholder or reverse geocoding result
         trailing: const Icon(Icons.chevron_right, color: AppColors.primary),
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const InstrutorLocationPicker()),
+            MaterialPageRoute(
+              builder: (context) => const InstrutorLocationPicker(),
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildDocumentoItem(String title, DocumentStatus? status, DocumentType type) {
-    final bool canResubmit = status == DocumentStatus.refused || status == DocumentStatus.expired;
+  Widget _buildDocumentoItem(
+    String title,
+    DocumentStatus? status,
+    DocumentType type,
+  ) {
+    final bool canResubmit =
+        status == DocumentStatus.refused || status == DocumentStatus.expired;
 
     return Card(
       child: Column(
@@ -281,7 +460,8 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
                     suffixIcon: Icon(Icons.upload_file),
                   ),
                   onTap: () async {
-                    FilePickerResult? result = await FilePicker.platform.pickFiles();
+                    FilePickerResult? result = await FilePicker.platform
+                        .pickFiles();
                     if (result != null) {
                       selectedFile = File(result.files.single.path!);
                       setDialogState(() {
@@ -294,7 +474,10 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     if (selectedFile == null) {
-                      DialogServices().alertDialog(context, "Por favor, selecione um arquivo.");
+                      DialogServices().alertDialog(
+                        context,
+                        "Por favor, selecione um arquivo.",
+                      );
                       return;
                     }
 
@@ -303,21 +486,23 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
                     DialogServices.loading2(context);
 
                     try {
-                      String url = await FirestoreUploadFiles().uploadDingleFile(
-                        arquivo: selectedFile!,
-                        diretorio: "documentos/${widget.usuario.id}",
-                        fileName: type.name,
-                      );
+                      String url = await FirestoreUploadFiles()
+                          .uploadDingleFile(
+                            arquivo: selectedFile!,
+                            diretorio: "documentos/${widget.usuario.id}",
+                            fileName: type.name,
+                          );
 
                       Map<String, dynamic> updateData = {};
                       if (type == DocumentType.id) {
                         updateData["image"] = url;
                         updateData["instrutor.face.url"] = url;
-                        updateData["instrutor.face.status"] = DocumentStatus.sended.name;
+                        updateData["instrutor.face.status"] =
+                            DocumentStatus.sended.name;
                       } else {
-                        String field = type == DocumentType.cnh ? "cnh" : "credencial";
-                        updateData["instrutor.$field.url"] = url;
-                        updateData["instrutor.$field.status"] = DocumentStatus.sended.name;
+                        updateData["instrutor.credencial.url"] = url;
+                        updateData["instrutor.credencial.status"] =
+                            DocumentStatus.sended.name;
                       }
 
                       await FirebaseFirestore.instance
@@ -328,20 +513,24 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
                       if (mounted) {
                         Navigator.pop(context); // Close loading
                         setState(() {
-                          if (type == DocumentType.cnh) {
-                            cnhStatus = DocumentStatus.sended;
-                          } else if (type == DocumentType.credencial) {
+                          if (type == DocumentType.credencial) {
                             credencialStatus = DocumentStatus.sended;
                           } else if (type == DocumentType.id) {
                             faceStatus = DocumentStatus.sended;
                           }
                         });
-                        DialogServices().alertDialog(context, "Documento enviado com sucesso!");
+                        DialogServices().alertDialog(
+                          context,
+                          "Documento enviado com sucesso!",
+                        );
                       }
                     } catch (e) {
                       if (mounted) {
                         Navigator.pop(context); // Close loading
-                        DialogServices().alertDialog(context, "Erro ao enviar documento: $e");
+                        DialogServices().alertDialog(
+                          context,
+                          "Erro ao enviar documento: $e",
+                        );
                       }
                     }
                   },
@@ -381,5 +570,166 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
       default:
         return AppChipType.none;
     }
+  }
+
+  String getPixKeyTypeLabel(String? type) {
+    switch (type) {
+      case "CPF":
+        return "CPF";
+      case "CNPJ":
+        return "CNPJ";
+      case "EMAIL":
+        return "E-mail";
+      case "PHONE":
+        return "Telefone";
+      case "EVP":
+        return "Chave Aleatória";
+      default:
+        return "Não cadastrado";
+    }
+  }
+
+  Widget _buildPixCard(Usuario liveUser) {
+    final pixKeyType = liveUser.instrutor?.pixKeyType;
+    final pixKey = liveUser.instrutor?.pixKey;
+    final hasPix = pixKeyType != null && pixKey != null && pixKey.isNotEmpty;
+
+    return Card(
+      child: ListTile(
+        leading: Icon(Icons.pix, color: AppColors.primary),
+        title: const Text("Chave PIX de Recebimento"),
+        subtitle: Text(
+          hasPix
+              ? "${getPixKeyTypeLabel(pixKeyType)}: $pixKey"
+              : "Toque para cadastrar seus dados de transferência",
+        ),
+        trailing: Icon(
+          hasPix ? Icons.check_circle_outline : Icons.info_outline,
+          color: hasPix ? AppColors.success : AppColors.warning500,
+        ),
+        onTap: () => _showPixDialog(liveUser),
+      ),
+    );
+  }
+
+  void _showPixDialog(Usuario liveUser) {
+    String? selectedType = liveUser.instrutor?.pixKeyType ?? 'CPF';
+
+    final allowedTypes = ['CPF', 'CNPJ', 'EMAIL', 'PHONE', 'EVP'];
+    if (!allowedTypes.contains(selectedType)) {
+      selectedType = 'CPF';
+    }
+
+    final keyController = TextEditingController(
+      text: liveUser.instrutor?.pixKey,
+    );
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (builderContext, setDialogState) {
+            return AlertDialog(
+              title: const Text("Dados de Transferência (PIX)"),
+              content: Form(
+                key: _pixFormKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedType,
+                      decoration: const InputDecoration(
+                        labelText: "Tipo de Chave",
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'CPF', child: Text("CPF")),
+                        DropdownMenuItem(value: 'CNPJ', child: Text("CNPJ")),
+                        DropdownMenuItem(value: 'EMAIL', child: Text("E-mail")),
+                        DropdownMenuItem(
+                          value: 'PHONE',
+                          child: Text("Telefone"),
+                        ),
+                        DropdownMenuItem(
+                          value: 'EVP',
+                          child: Text("Chave Aleatória"),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedType = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 15),
+                    TextFormField(
+                      controller: keyController,
+                      decoration: const InputDecoration(
+                        labelText: "Chave PIX",
+                        border: OutlineInputBorder(),
+                        hintText: "Digite sua chave PIX",
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return "A chave PIX é obrigatória";
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text("Cancelar"),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final formState = _pixFormKey.currentState;
+                    if (formState != null && formState.validate()) {
+                      Navigator.pop(
+                        dialogContext,
+                      ); // Close dialog using dialogContext
+                      DialogServices.loading2(
+                        context,
+                      ); // Open loading using screen context
+
+                      try {
+                        await FirebaseFirestore.instance
+                            .collection("users")
+                            .doc(widget.usuario.id)
+                            .update({
+                              "instrutor.pixKeyType": selectedType,
+                              "instrutor.pixKey": keyController.text.trim(),
+                            });
+
+                        if (mounted) {
+                          Navigator.pop(
+                            context,
+                          ); // Close loading using screen context
+                          setState(() {});
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          Navigator.pop(
+                            context,
+                          ); // Close loading using screen context
+                          DialogServices().alertDialog(
+                            context,
+                            "Erro ao atualizar dados: $e",
+                          );
+                        }
+                      }
+                    }
+                  },
+                  child: const Text("Salvar"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 }

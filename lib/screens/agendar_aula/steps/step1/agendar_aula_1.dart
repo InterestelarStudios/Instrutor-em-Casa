@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:instrutor_em_casa/models/aula.dart';
 import 'package:instrutor_em_casa/models/instrutor.dart';
 import 'package:instrutor_em_casa/models/usuario.dart';
+import 'package:instrutor_em_casa/models/vehicle.dart';
 import 'package:instrutor_em_casa/screens/agendar_aula/widgets/selection_tile.dart';
+import 'package:instrutor_em_casa/screens/profile/my_documents_screen.dart';
 
 class AgendarAula1 extends StatefulWidget {
   const AgendarAula1({
@@ -14,6 +16,7 @@ class AgendarAula1 extends StatefulWidget {
     required this.onChangedHoursPerSession,
     required this.instrutorCategories,
     required this.usuario,
+    required this.defaultVehicle,
   });
   final ValueChanged<CNHCategory> onChangedLessonCategory;
   final ValueChanged<LessonType> onChangedLessonType;
@@ -22,6 +25,7 @@ class AgendarAula1 extends StatefulWidget {
   final ValueChanged<int> onChangedHoursPerSession;
   final List<CNHCategory> instrutorCategories;
   final Usuario usuario;
+  final Vehicle? defaultVehicle;
 
   @override
   State<AgendarAula1> createState() => _AgendarAula1State();
@@ -73,7 +77,17 @@ class _AgendarAula1State extends State<AgendarAula1> with AutomaticKeepAliveClie
         title: const Text("Documento necessário"),
         content: Text("Você precisa anexar e ter aprovado o seu documento de $docName para solicitar este tipo de aula."),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Entendi")),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Depois")),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => MyDocumentsScreen(usuario: widget.usuario)),
+              );
+            },
+            child: const Text("Enviar Agora"),
+          ),
         ],
       ),
     );
@@ -136,6 +150,8 @@ class _AgendarAula1State extends State<AgendarAula1> with AutomaticKeepAliveClie
             );
           }
         ),
+        if (lessonVehicle == LessonVehicle.instrutor)
+          _buildDefaultVehicleCard(),
         sessionTitle(
           "Pacote de Horas: $hours h",
           description: "Escolha a quantidade total de horas que deseja contratar para o seu treinamento.",
@@ -190,6 +206,68 @@ class _AgendarAula1State extends State<AgendarAula1> with AutomaticKeepAliveClie
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDefaultVehicleCard() {
+    final vehicle = widget.defaultVehicle;
+
+    if (vehicle == null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8.0),
+        child: Text(
+          "O instrutor não possui veículo padrão cadastrado.",
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Colors.red[700],
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(top: 10),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: Colors.grey[200]!),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.directions_car, color: Colors.blue),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "${vehicle.brand} ${vehicle.model}",
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Cor: ${vehicle.color} • Categoria: ${vehicle.category}",
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                  Text(
+                    "Combustível: ${vehicle.fuel}",
+                    style: const TextStyle(color: Colors.grey, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -11,6 +11,7 @@ import 'package:instrutor_em_casa/screens/agendar_aula/steps/step3/agendar_aula_
 import 'package:instrutor_em_casa/screens/agendar_aula/widgets/stepper.dart';
 import 'package:instrutor_em_casa/services/asaas_service.dart';
 import 'package:instrutor_em_casa/widgets/dialog_services.dart';
+import 'package:instrutor_em_casa/widgets/theme.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -37,6 +38,7 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
   late Position position;
   bool success = false;
   bool processingPayment = false;
+  bool acceptedTerms = false;
 
   void getPosition() {
     Geolocator.getCurrentPosition().then((value){
@@ -52,39 +54,32 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
     getPosition();
   }
   
+  LessonPrice price(){
+    final price = LessonPrice(
+      amount: 0,
+      hourPrice: 0,
+      distance: 0,
+    );
+
+    if(hours != null && category != null){
+      // Categoria A = 90/h, Outras (B, C, etc) = 120/h
+      double rate = category == CNHCategory.A ? 90.0 : 120.0;
+      price.hourPrice = (hours ?? 0) * rate;
+      price.amount = price.hourPrice;
+    }
+
+    if(lessonVehicle != null){
+      if(lessonVehicle == LessonVehicle.instrutor){
+        // Taxa fixa de deslocamento: R$ 20,00
+        price.distance = 20.0;
+        price.amount = price.amount + price.distance;
+      }
+    }
+    return price;
+  }
+
   @override
   Widget build(BuildContext context) {
-
-    double distance(){
-      return Geolocator.distanceBetween(
-        widget.usuario.geo!["geopoint"].latitude,
-        widget.usuario.geo!["geopoint"].longitude,
-        position.latitude,
-        position.longitude
-      ) / 10000;
-    }
-
-    LessonPrice price(){
-      final price = LessonPrice(
-        amount: 0,
-        hourPrice: 0,
-        distance: 0,
-      );
-
-      if(hours != null){
-        // Assuming R$ 60,00 per hour
-        price.hourPrice = hours! * 60.0;
-        price.amount = price.amount + price.hourPrice;
-      }
-
-      if(lessonVehicle != null){
-        if(lessonVehicle == LessonVehicle.instrutor){
-          price.distance = (distance() < 10 ? 10 : distance().ceilToDouble());
-          price.amount = price.amount + price.distance;
-        }
-      }
-      return price;
-    }
 
     bool didPop(){
       if(success){
@@ -98,7 +93,7 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
       canPop: didPop(),
       onPopInvokedWithResult: (didPop, result) {
         if(page > 0){
-          pageController.previousPage(duration: Duration(milliseconds: 300), curve: Curves.ease,);
+          pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.ease,);
         }
       },
       child: Scaffold(
@@ -132,14 +127,18 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
                     onChangedHoursPerSession: (value)=> setState(()=> hoursPerSession = value),
                     instrutorCategories: widget.usuario.instrutor?.categories ?? [],
                     usuario: widget.myUser,
+                    defaultVehicle: widget.usuario.instrutor?.defaultVehicle,
                   ),
                   AgendarAula2(
                     hours: hours ?? 1,
                     hoursPerSession: hoursPerSession,
                     onChangedSessions: (value)=> setState(()=> sessions = value),
+                    alunoId: widget.myUser.id,
+                    instrutorId: widget.usuario.id,
                   ),
                   AgendarAula3(
                     onChangedPayment: (value)=> setState(()=> paymentType = value),
+                    onChangedTerms: (value)=> setState(()=> acceptedTerms = value),
                     resumeWidget: page < 2 ? const SizedBox():
                     Card(
                       child: Padding(
@@ -150,6 +149,15 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
                             resumeRow(title: "Instrutor", value: widget.usuario.name),
                             resumeRow(title: "Tipo de aula", value: lessonTypeTranslate(lessonType!)),
                             resumeRow(title: "Veículo", value: lessonVehicleTranslate(lessonVehicle!)),
+                            if (lessonVehicle == LessonVehicle.instrutor && widget.usuario.instrutor?.defaultVehicle != null) ...[
+                              Padding(
+                                padding: const EdgeInsets.only(left: 12, bottom: 8),
+                                child: Text(
+                                  "(${widget.usuario.instrutor!.defaultVehicle!.brand} ${widget.usuario.instrutor!.defaultVehicle!.model} - ${widget.usuario.instrutor!.defaultVehicle!.color})",
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                                ),
+                              ),
+                            ],
                             resumeRow(title: "Total de Horas", value: "$hours h"),
                             const SizedBox(height: 10),
                             const Divider(),
@@ -199,12 +207,60 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
                   curve: Curves.ease,
                 );
               } else {
-                processPaymentAndBook(price());
+                _showContractPointsDialog();
               }
             },
-            child: processingPayment ? const CircularProgressIndicator() : Text("Próximo")
+            child: processingPayment ? const CircularProgressIndicator() : Text(page < 2 ? "Próximo" : "Confirmar e Pagar")
           ),
         ),
+      ),
+    );
+  }
+
+  void _showContractPointsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Resumo do Contrato"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Ao prosseguir, você confirma que está ciente dos seguintes pontos:"),
+              const SizedBox(height: 15),
+              _pointItem("Intermediação: A plataforma apenas conecta você a instrutores autônomos."),
+              _pointItem("Pagamentos: Devem ser feitos exclusivamente pelo app. Proibido pagar direto ao instrutor."),
+              _pointItem("Cancelamento: Reembolso parcial ou retenção dependendo da antecedência."),
+              _pointItem("Tolerância: Atrasos de no máximo 5 minutos por sessão."),
+              _pointItem("Documentação: Você deve portar sua LADV ou CNH física durante as aulas."),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Revisar")),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              processPaymentAndBook(price());
+            },
+            child: const Text("Li e Concordo"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pointItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
+        ],
       ),
     );
   }
@@ -214,11 +270,13 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
     DialogServices.loading2(context);
 
     try {
-      // 1. Verificar/Criar Cliente no Asaas
+      // 0. (Validar instrutor pode receber pagamentos via plataforma? Atualmente 100% responsabilidade da plataforma, sem necessidade de walletId)
+
+      // 1. Verificar/Criar Cliente no Asaas (Aluno)
       String? customerId = widget.myUser.asaasId;
-      if (paymentType != PaymentType.dinheiro && customerId == null) {
+      if (customerId == null) {
         customerId = await AsaasService.createCustomer(widget.myUser);
-        if (customerId == null) throw "Erro ao criar cliente no Asaas";
+        if (customerId == null) throw "Erro ao criar seu perfil de cliente no Asaas. Verifique seus dados.";
         await FirebaseFirestore.instance.collection("users").doc(widget.myUser.id).update({
           "asaasId": customerId,
         });
@@ -231,7 +289,7 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
         aluno: widget.myUser.toDetails(),
         instrutor: widget.usuario.toDetails(),
         category: category!,
-        status: LessonStatus.accepted,
+        status: LessonStatus.requested,
         date: sessions.first.date,
         created: Timestamp.now(),
         horasContratadas: hours!,
@@ -243,48 +301,99 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
         paymentType: paymentType!,
       );
 
+      String? paymentId;
+      String? invoiceUrl;
+      String? paymentStatus;
+
       // 3. Processar Pagamento conforme tipo
       if (paymentType == PaymentType.pix) {
         final payment = await AsaasService.createPayment(
           aula: aula,
-          customerId: customerId!,
-          walletId: widget.usuario.walletId!,
+          customerId: customerId,
           billingType: 'PIX',
         );
 
-        if (payment == null) throw "Erro ao gerar PIX";
+        if (payment == null) throw "Não foi possível gerar o QR Code PIX no momento.";
+
+        paymentId = payment['id'];
+        invoiceUrl = payment['invoiceUrl'];
+        paymentStatus = payment['status'] ?? 'PENDING';
+
+        await FirebaseFirestore.instance.collection("cobrancas").doc(paymentId).set({
+          'id': paymentId,
+          'aulaId': aula.id,
+          'alunoId': widget.myUser.id,
+          'alunoName': widget.myUser.name,
+          'value': payment['value'] ?? price.amount,
+          'billingType': 'PIX',
+          'status': paymentStatus,
+          'invoiceUrl': invoiceUrl,
+          'dueDate': payment['dueDate'],
+          'created': FieldValue.serverTimestamp(),
+        });
 
         Navigator.pop(context); // Fecha loading
-        await showPixDialog(payment['invoiceUrl'], payment['id']);
+        await showPixDialog(invoiceUrl!, paymentId!);
       } else if (paymentType == PaymentType.debito) {
         final payment = await AsaasService.createPayment(
           aula: aula,
-          customerId: customerId!,
-          walletId: widget.usuario.walletId!,
-          billingType: 'UNDEFINED', // Deixa o cliente escolher no checkout
+          customerId: customerId,
+          billingType: 'UNDEFINED',
         );
 
-        if (payment == null) throw "Erro ao gerar cobrança";
+        if (payment == null) throw "Não foi possível gerar a fatura de débito.";
+
+        paymentId = payment['id'];
+        invoiceUrl = payment['invoiceUrl'];
+        paymentStatus = payment['status'] ?? 'PENDING';
+
+        await FirebaseFirestore.instance.collection("cobrancas").doc(paymentId).set({
+          'id': paymentId,
+          'aulaId': aula.id,
+          'alunoId': widget.myUser.id,
+          'alunoName': widget.myUser.name,
+          'value': payment['value'] ?? price.amount,
+          'billingType': 'DEBIT_CARD',
+          'status': paymentStatus,
+          'invoiceUrl': invoiceUrl,
+          'dueDate': payment['dueDate'],
+          'created': FieldValue.serverTimestamp(),
+        });
 
         Navigator.pop(context); // Fecha loading
-        await launchUrl(Uri.parse(payment['invoiceUrl']));
+        await launchUrl(Uri.parse(invoiceUrl!));
       } else if (paymentType == PaymentType.credito) {
-        // Aqui você solicitaria os dados do cartão em um diálogo
-        // Para este exemplo, vamos simular que os dados foram coletados
-        Navigator.pop(context);
-        DialogServices().alertDialog(context, "Funcionalidade de Cartão de Crédito Direto requer coleta de dados segura (PCI). Redirecionando para checkout seguro Asaas.");
-        
         final payment = await AsaasService.createPayment(
           aula: aula,
-          customerId: customerId!,
-          walletId: widget.usuario.walletId!,
+          customerId: customerId,
           billingType: 'CREDIT_CARD',
         );
-        if (payment == null) throw "Erro ao gerar cobrança";
-        await launchUrl(Uri.parse(payment['invoiceUrl']));
-      } else if (paymentType == PaymentType.dinheiro) {
+        if (payment == null) throw "Não foi possível gerar a fatura de crédito.";
+
+        paymentId = payment['id'];
+        invoiceUrl = payment['invoiceUrl'];
+        paymentStatus = payment['status'] ?? 'PENDING';
+
+        await FirebaseFirestore.instance.collection("cobrancas").doc(paymentId).set({
+          'id': paymentId,
+          'aulaId': aula.id,
+          'alunoId': widget.myUser.id,
+          'alunoName': widget.myUser.name,
+          'value': payment['value'] ?? price.amount,
+          'billingType': 'CREDIT_CARD',
+          'status': paymentStatus,
+          'invoiceUrl': invoiceUrl,
+          'dueDate': payment['dueDate'],
+          'created': FieldValue.serverTimestamp(),
+        });
+
         Navigator.pop(context); // Fecha loading
+        await launchUrl(Uri.parse(invoiceUrl!));
       }
+
+      aula.paymentId = paymentId;
+      aula.invoiceUrl = invoiceUrl;
+      aula.paymentStatus = paymentStatus ?? 'PENDING';
 
       // 4. Salvar Aula no Firestore
       await firestore.set(aula.toMap());
@@ -316,36 +425,53 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
     // Aqui vamos simplificar mostrando o link da fatura ou um placeholder.
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Pagamento PIX"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("Escaneie o QR Code ou use o link abaixo para pagar:"),
-            const SizedBox(height: 20),
-            QrImageView(
-              data: invoiceUrl,
-              version: QrVersions.auto,
-              size: 200.0,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: invoiceUrl));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Link copiado!")),
-                );
-              },
-              child: const Text("Copiar Link de Pagamento"),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Já paguei"),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
+        backgroundColor: AppColors.surface,
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                "Pagamento PIX",
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text("Escaneie o QR Code ou use o link abaixo para pagar:"),
+              const SizedBox(height: 20),
+              Center(
+                child: SizedBox(
+                  width: 200,
+                  height: 200,
+                  child: QrImageView(
+                    data: invoiceUrl,
+                    version: QrVersions.auto,
+                    size: 200.0,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: invoiceUrl));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Link copiado!")),
+                  );
+                },
+                child: const Text("Copiar Link de Pagamento"),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Já paguei"),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -364,7 +490,7 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
         return false;
       }
     } else if(page == 2){
-      if(paymentType != null){
+      if(paymentType != null && acceptedTerms){
         return true;
       } else {
         return false;

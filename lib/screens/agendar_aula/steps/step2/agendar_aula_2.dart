@@ -10,11 +10,15 @@ class AgendarAula2 extends StatefulWidget {
     required this.hours,
     required this.hoursPerSession,
     required this.onChangedSessions,
+    required this.alunoId,
+    required this.instrutorId,
   });
 
   final int hours;
   final int hoursPerSession;
   final ValueChanged<List<SessaoAula>> onChangedSessions;
+  final String alunoId;
+  final String instrutorId;
 
   @override
   State<AgendarAula2> createState() => _AgendarAula2State();
@@ -22,11 +26,106 @@ class AgendarAula2 extends StatefulWidget {
 
 class _AgendarAula2State extends State<AgendarAula2> with AutomaticKeepAliveClientMixin {
   List<SessaoAula> sessions = [];
+  List<ScheduledRange> _existingSessions = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _initializeSessions();
+    _loadExistingSessions();
+  }
+
+  Future<void> _loadExistingSessions() async {
+    try {
+      final studentQuery = await FirebaseFirestore.instance
+          .collection("aulas")
+          .where("aluno.id", isEqualTo: widget.alunoId)
+          .where("status", whereIn: ["requested", "accepted", "active", "partially_done"])
+          .get();
+
+      final instructorQuery = await FirebaseFirestore.instance
+          .collection("aulas")
+          .where("instrutor.id", isEqualTo: widget.instrutorId)
+          .where("status", whereIn: ["requested", "accepted", "active", "partially_done"])
+          .get();
+
+      List<ScheduledRange> ranges = [];
+
+      for (var doc in studentQuery.docs) {
+        final aulaData = doc.data();
+        final sessionsList = (aulaData['sessions'] as List<dynamic>?) ?? [];
+        final instrutorName = aulaData['instrutor']['name'] as String? ?? "Instrutor";
+        for (var sMap in sessionsList) {
+          final statusStr = sMap['status'] as String? ?? 'scheduled';
+          if (statusStr == 'completed' || statusStr == 'missed') continue;
+
+          final date = (sMap['date'] as Timestamp).toDate();
+          final duration = sMap['duration'] as int? ?? 1;
+          ranges.add(ScheduledRange(
+            start: date,
+            end: date.add(Duration(hours: duration)),
+            label: "aluno",
+            otherName: instrutorName,
+          ));
+        }
+      }
+
+      for (var doc in instructorQuery.docs) {
+        final aulaData = doc.data();
+        final sessionsList = (aulaData['sessions'] as List<dynamic>?) ?? [];
+        final alunoName = aulaData['aluno']['name'] as String? ?? "Aluno";
+        for (var sMap in sessionsList) {
+          final statusStr = sMap['status'] as String? ?? 'scheduled';
+          if (statusStr == 'completed' || statusStr == 'missed') continue;
+
+          final date = (sMap['date'] as Timestamp).toDate();
+          final duration = sMap['duration'] as int? ?? 1;
+          ranges.add(ScheduledRange(
+            start: date,
+            end: date.add(Duration(hours: duration)),
+            label: "instrutor",
+            otherName: alunoName,
+          ));
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _existingSessions = ranges;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      debugPrint("Erro ao carregar sessões existentes: $e");
+    }
+  }
+
+  String? _checkConflict(DateTime start, int durationHours) {
+    final end = start.add(Duration(hours: durationHours));
+
+    for (var existing in _existingSessions) {
+      final bufferedExistingStart = existing.start.subtract(const Duration(minutes: 30));
+      final bufferedExistingEnd = existing.end.add(const Duration(minutes: 30));
+
+      if (start.isBefore(bufferedExistingEnd) && end.isAfter(bufferedExistingStart)) {
+        final formattedDate = DateFormat('dd/MM/yyyy').format(existing.start);
+        final formattedStart = DateFormat('HH:mm').format(existing.start);
+        final formattedEnd = DateFormat('HH:mm').format(existing.end);
+
+        if (existing.label == "aluno") {
+          return "Você já possui uma aula agendada para este dia ($formattedDate) das $formattedStart às $formattedEnd com o instrutor ${existing.otherName}. Por favor, selecione outro horário.";
+        } else {
+          return "O instrutor já possui uma aula agendada para este dia ($formattedDate) das $formattedStart às $formattedEnd com o aluno ${existing.otherName}. Por favor, selecione outro horário.";
+        }
+      }
+    }
+    return null;
   }
 
   @override
@@ -70,6 +169,13 @@ class _AgendarAula2State extends State<AgendarAula2> with AutomaticKeepAliveClie
   }
 
   Future<void> _pickDateTime(int index) async {
+    if (_isLoading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Aguarde, verificando disponibilidade de horários...")),
+      );
+      return;
+    }
+
     final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: _getInitialDate(index),
@@ -86,15 +192,35 @@ class _AgendarAula2State extends State<AgendarAula2> with AutomaticKeepAliveClie
       );
 
       if (pickedTime != null) {
+        final startDateTime = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+
+        final conflictMessage = _checkConflict(startDateTime, sessions[index].duration);
+        if (conflictMessage != null) {
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text("Conflito de Horário"),
+                content: Text(conflictMessage),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("Entendi"),
+                  ),
+                ],
+              ),
+            );
+          }
+          return;
+        }
+
         setState(() {
-          final startDateTime = DateTime(
-            pickedDate.year,
-            pickedDate.month,
-            pickedDate.day,
-            pickedTime.hour,
-            pickedTime.minute,
-          );
-          
           sessions[index].date = Timestamp.fromDate(startDateTime);
           sessions[index].start = null; 
           sessions[index].end = null; 
@@ -137,6 +263,19 @@ class _AgendarAula2State extends State<AgendarAula2> with AutomaticKeepAliveClie
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
+    if (_isLoading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 15),
+            Text("Verificando disponibilidade de horários...", style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      );
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.all(20),
@@ -222,4 +361,18 @@ class _AgendarAula2State extends State<AgendarAula2> with AutomaticKeepAliveClie
 
   @override
   bool get wantKeepAlive => true;
+}
+
+class ScheduledRange {
+  final DateTime start;
+  final DateTime end;
+  final String label; // "aluno" or "instrutor"
+  final String otherName; // Name of the other party
+
+  ScheduledRange({
+    required this.start,
+    required this.end,
+    required this.label,
+    required this.otherName,
+  });
 }

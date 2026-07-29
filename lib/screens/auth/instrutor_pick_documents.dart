@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:instrutor_em_casa/models/instrutor.dart';
 import 'package:instrutor_em_casa/models/usuario.dart';
+import 'package:instrutor_em_casa/screens/profile/pdf_viewer_screen.dart';
+
 import 'package:instrutor_em_casa/services/firestore_upload_files.dart';
 import 'package:instrutor_em_casa/widgets/dialog_services.dart';
 
@@ -19,7 +21,6 @@ class InstrutorPickDocuments extends StatefulWidget {
 
 class _InstrutorPickDocumentsState extends State<InstrutorPickDocuments> {
   PlatformFile? credencial;
-  PlatformFile? cnh;
   PlatformFile? selfie;
   bool loading = false;
 
@@ -69,6 +70,130 @@ class _InstrutorPickDocumentsState extends State<InstrutorPickDocuments> {
     );
   }
 
+  void _showInstructorContractDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Contrato do Instrutor"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Ao se tornar um instrutor parceiro, você concorda com os seguintes termos:"),
+              const SizedBox(height: 15),
+              _pointItem("Autonomia: Relação civil sem vínculo empregatício com a plataforma."),
+              _pointItem("Regularidade: Manter CNH e credenciais de instrutor válidas."),
+              _pointItem("Veículo: Responsabilidade total pela segurança e documentação do seu veículo."),
+              _pointItem("Bypass: Proibido receber pagamentos por fora de alunos vindos do app."),
+              _pointItem("Privacidade: Dados dos alunos são confidenciais e exclusivos para as aulas."),
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PdfViewerScreen(
+                        title: "Contrato do Instrutor",
+                        assetPath: "assets/contrato_instrutor.pdf",
+                      ),
+                    ),
+                  );
+                },
+                child: const Text("Ver contrato completo", style: TextStyle(decoration: TextDecoration.underline)),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _processDocuments();
+            },
+            child: const Text("Aceitar e Enviar"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pointItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.check_circle_outline, size: 16, color: Colors.blue),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _processDocuments() async {
+    setState(() {
+      loading = true;
+    });
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+
+    String? credentialUrl;
+    String? selfieUrl;
+
+    try{
+      // 1. Upload para Firebase Storage
+      credentialUrl = await FirestoreUploadFiles().uploadDingleFile(
+        arquivo: File(credencial!.path!),
+        diretorio: "documents/${firebaseUser!.uid}",
+        fileName: "credential"
+      );
+
+      selfieUrl = await FirestoreUploadFiles().uploadDingleFile(
+        arquivo: File(selfie!.path!),
+        diretorio: "documents/${firebaseUser.uid}",
+        fileName: "selfie"
+      );
+
+      // 4. Atualizar Firestore com dados do Instrutor
+      await FirebaseFirestore.instance.collection("users").doc(firebaseUser.uid).update({
+        "type" : UserType.instrutor.name,
+        "instrutor" : InstrutorData(
+          active: false,
+          asaasStatus: 'PENDING',
+          credencial: UserDocument(
+            type: DocumentType.credencial,
+            status: DocumentStatus.sended,
+            url: credentialUrl,
+          ),
+          categories: [],
+          aulas: 0,
+          horas: 0,
+          face: UserDocument(
+            type: DocumentType.face,
+            status: DocumentStatus.sended,
+            url: selfieUrl,
+          ),
+        ).toMap()
+      });
+
+      if (context.mounted) {
+        Navigator.pop(context);
+        DialogServices().alertDialog(context, "Seus documentos foram enviados! Você será notificado assim que for aprovado na plataforma!", title: "Seja bem vindo!");
+      }
+
+    } catch (e){
+      setState(() {
+        loading = false;
+      });
+      debugPrint(e.toString());
+      if (context.mounted) {
+        DialogServices().alertDialog(context, "Erro ao processar documentos: $e");
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -91,19 +216,9 @@ class _InstrutorPickDocumentsState extends State<InstrutorPickDocuments> {
             selected: credencial != null,
             contentPadding: const EdgeInsets.only(),
             onTap: loading ? null : () => _pickDocument((file) => setState(() => credencial = file)),
-            title: Text("Toque para Anexar"),
-            leading: Icon(Icons.attach_file_rounded),
+            title: const Text("Toque para Anexar"),
+            leading: const Icon(Icons.attach_file_rounded),
             subtitle: credencial == null ? null : Text(credencial!.name),
-          ),
-          const SizedBox(height: 20,),
-          Text("CNH", style: Theme.of(context).textTheme.titleLarge,),
-          ListTile(
-            selected: cnh != null,
-            onTap: loading ? null : () => _pickDocument((file) => setState(() => cnh = file)),
-            contentPadding: const EdgeInsets.only(),
-            title: Text("Toque para Anexar"),
-            leading: Icon(Icons.attach_file_rounded),
-            subtitle: cnh == null ? null : Text(cnh!.name),
           ),
           const SizedBox(height: 20,),
           Text("Selfie com Documento", style: Theme.of(context).textTheme.titleLarge,),
@@ -111,120 +226,21 @@ class _InstrutorPickDocumentsState extends State<InstrutorPickDocuments> {
             selected: selfie != null,
             onTap: loading ? null : () => _pickDocument((file) => setState(() => selfie = file)),
             contentPadding: const EdgeInsets.only(),
-            title: Text("Toque para Anexar"),
-            leading: Icon(Icons.add_a_photo_rounded),
+            title: const Text("Toque para Anexar"),
+            leading: const Icon(Icons.add_a_photo_rounded),
             subtitle: selfie == null ? null : Text(selfie!.name),
           ),
         ],
       ),
-      bottomNavigationBar: credencial != null && cnh != null && selfie != null ?
+      bottomNavigationBar: credencial != null && selfie != null ?
       Container(
         height: 50,
         margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         child: FilledButton(
           onPressed: loading ? null : () async {
-            setState(() {
-              loading = true;
-            });
-            final firebaseUser = FirebaseAuth.instance.currentUser;
-
-            String? credentialUrl;
-            String? cnhUrl;
-            String? selfieUrl;
-
-            try{
-              // 1. Upload para Firebase Storage
-              credentialUrl = await FirestoreUploadFiles().uploadDingleFile(
-                arquivo: File(credencial!.path!),
-                diretorio: "documents/${firebaseUser!.uid}",
-                fileName: "credential"
-              );
-
-              cnhUrl = await FirestoreUploadFiles().uploadDingleFile(
-                arquivo: File(cnh!.path!),
-                diretorio: "documents/${firebaseUser.uid}",
-                fileName: "cnh"
-              );
-
-              selfieUrl = await FirestoreUploadFiles().uploadDingleFile(
-                arquivo: File(selfie!.path!),
-                diretorio: "documents/${firebaseUser.uid}",
-                fileName: "selfie"
-              );
-
-              // 2. Criar subconta no Asaas
-              /*final asaasAccount = await AsaasService.createSubAccount(usuario);
-              if (asaasAccount == null) throw "Erro ao criar conta no Asaas";
-
-              final subAccountApiKey = asaasAccount['apiKey'];
-              final walletId = asaasAccount['walletId'];
-              final asaasId = asaasAccount['id'];
-
-              // 3. Upload de documentos para o Asaas
-              final pendingDocs = await AsaasService.getPendingDocuments(subAccountApiKey);
-              
-              for (var docGroup in pendingDocs) {
-                // Mapeamento simples para demonstração: 
-                // Se o grupo parecer de identificação, manda a CNH.
-                // Se pedir selfie, manda a selfie.
-                String docType = 'IDENTIFICATION';
-                File fileToUpload = File(cnh!.path!);
-
-                if (docGroup['type'] == 'IDENTIFICATION_SELFIE') {
-                  docType = 'IDENTIFICATION_SELFIE';
-                  fileToUpload = File(selfie!.path!);
-                }
-
-                await AsaasService.uploadDocument(
-                  subAccountApiKey: subAccountApiKey,
-                  groupId: docGroup['id'],
-                  file: fileToUpload,
-                  type: docType,
-                );
-              }*/
-
-              // 4. Atualizar Firestore
-              await FirebaseFirestore.instance.collection("users").doc(firebaseUser.uid).update({
-                "type" : UserType.instrutor.name,
-                //"asaasId" : asaasId,
-                //"walletId" : walletId,
-                "instrutor" : InstrutorData(
-                  active: false,
-                  //asaasApiKey: subAccountApiKey,
-                  asaasStatus: 'PENDING',
-                  cnh: UserDocument(
-                    type: DocumentType.cnh,
-                    status: DocumentStatus.sended,
-                    url: cnhUrl,
-                  ),
-                  credencial: UserDocument(
-                    type: DocumentType.credencial,
-                    status: DocumentStatus.sended,
-                    url: credentialUrl,
-                  ),
-                  categories: [],
-                  aulas: 0,
-                  horas: 0,
-                  face: UserDocument(
-                    type: DocumentType.face,
-                    status: DocumentStatus.sended,
-                    url: selfieUrl,
-                  ),
-                ).toMap()
-              });
-
-              Navigator.pop(context);
-              DialogServices().alertDialog(context, "Sua conta foi criada e está em análise. Você será notificado assim que for aprovado!", title: "Seja bem vindo!");
-
-            } catch (e){
-              setState(() {
-                loading = false;
-              });
-              debugPrint(e.toString());
-              DialogServices().alertDialog(context, "Erro ao processar documentos: $e");
-            }
+            _showInstructorContractDialog();
           },
-          child: loading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2,)) : Text("Prosseguir")
+          child: loading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2,)) : const Text("Prosseguir")
         ),
       ) : null,
     );

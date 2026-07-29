@@ -1,5 +1,6 @@
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { onRequest } = require("firebase-functions/v2/https");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 
@@ -35,7 +36,6 @@ async function notifyUser(userId, title, description, route, contentId) {
 
         // Salva na coleção global de notificações
         await admin.firestore().collection("notifications").doc(notificationId).set(notification);
-        console.log(`Notificação salva no Firestore para ${userId}: ${title}`);
 
         // Incrementa o contador do usuário
         await admin.firestore().collection("users").doc(userId).update({
@@ -53,14 +53,85 @@ async function notifyUser(userId, title, description, route, contentId) {
                 token: fcmToken,
             };
             await admin.messaging().send(message);
-            console.log(`Push enviado para ${userId}`);
-        } else {
-            console.log(`Usuário ${userId} não possui fcmToken.`);
         }
     } catch (error) {
         console.error(`Erro ao notificar usuário ${userId}:`, error);
     }
 }
+
+/**
+ * Webhook para receber notificações do Asaas (Pagamentos e Contas).
+ */
+exports.asaasWebhook = onRequest(async (req, res) => {
+    const event = req.body;
+    console.log(`Evento Asaas recebido: ${event.event}`);
+
+    try {
+        // --- TRATAMENTO DE PAGAMENTOS ---
+        if (event.payment) {
+            const payment = event.payment;
+            const aulaId = payment.externalReference;
+
+            if (!aulaId) {
+                console.log("Evento de pagamento ignorado: externalReference (aulaId) não encontrado.");
+                return res.status(200).send("Ignored");
+            }
+
+            const aulaDoc = await admin.firestore().collection("aulas").doc(aulaId).get();
+            if (!aulaDoc.exists) {
+                console.log(`Aula ${aulaId} não encontrada no Firestore.`);
+                return res.status(200).send("Not Found");
+            }
+
+            const aula = aulaDoc.data();
+
+            let aulaUpdate = {};
+            let paymentStatus = payment.status;
+
+            switch (event.event) {
+                case "PAYMENT_RECEIVED":
+                case "PAYMENT_CONFIRMED":
+                    aulaUpdate.status = "accepted";
+                    aulaUpdate.paymentStatus = "CONFIRMED";
+                    await notifyUser(aula.aluno.id, "Pagamento Confirmado!", "Sua aula foi confirmada com sucesso.", "/aula_details", aulaId);
+                    await notifyUser(aula.instrutor.id, "Novo Agendamento Pago!", `O aluno ${aula.aluno.name} confirmou o pagamento.`, "/aula_details", aulaId);
+                    break;
+
+                case "PAYMENT_REJECTED":
+                case "PAYMENT_CHARGEBACK_REQUESTED":
+                    aulaUpdate.status = "refused";
+                    aulaUpdate.paymentStatus = "REJECTED";
+                    await notifyUser(aula.aluno.id, "Problema no Pagamento", "Seu pagamento foi recusado. Verifique com seu banco.", "/aula_details", aulaId);
+                    break;
+
+                case "PAYMENT_OVERDUE":
+                    aulaUpdate.paymentStatus = "OVERDUE";
+                    await notifyUser(aula.aluno.id, "Pagamento Atrasado", "A fatura da sua aula venceu. Gere uma nova para continuar.", "/aula_details", aulaId);
+                    break;
+
+                case "PAYMENT_REFUNDED":
+                    aulaUpdate.status = "canceled";
+                    aulaUpdate.paymentStatus = "REFUNDED";
+                    break;
+            }
+
+            if (Object.keys(aulaUpdate).length > 0) {
+                await admin.firestore().collection("aulas").doc(aulaId).update(aulaUpdate);
+            }
+
+            // Sync with cobrancas collection
+            await admin.firestore().collection("cobrancas").doc(payment.id).set({
+                status: paymentStatus
+            }, { merge: true });
+        }
+
+
+        return res.status(200).send("OK");
+    } catch (error) {
+        console.error("Erro ao processar webhook Asaas:", error);
+        return res.status(500).send("Internal Server Error");
+    }
+});
 
 /**
  * Monitora sessões perdidas e aplica a regra dos 30%.

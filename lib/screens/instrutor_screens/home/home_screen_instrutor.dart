@@ -53,8 +53,6 @@ class _HomeScreenInstrutorState extends State<HomeScreenInstrutor> with Automati
         final userData = snapshot.data?.data();
         final String? inLesson = userData?['inLesson'];
         final bool isActive = userData?['instrutor']?['active'] ?? false;
-        final String asaasStatus = userData?['instrutor']?['asaasStatus'] ?? 'PENDING';
-        final String? asaasApiKey = userData?['instrutor']?['asaasApiKey'];
 
         return ListView(
           padding: const EdgeInsets.all(20),
@@ -70,10 +68,7 @@ class _HomeScreenInstrutorState extends State<HomeScreenInstrutor> with Automati
             ),
             const SizedBox(height: 20,),
             _buildStatusServico(isActive),
-            if (asaasStatus != 'APPROVED') ...[
-              const SizedBox(height: 20),
-              _buildAsaasStatusCard(asaasStatus, asaasApiKey),
-            ],
+
             if (inLesson != null) ...[
               ActiveLessonWidget(lessonId: inLesson, usuario: widget.usuario),
               const SizedBox(height: 20),
@@ -90,55 +85,6 @@ class _HomeScreenInstrutorState extends State<HomeScreenInstrutor> with Automati
     );
   }
 
-  Widget _buildAsaasStatusCard(String status, String? apiKey) {
-    return Card(
-      margin: EdgeInsets.zero,
-      color: Colors.orange[50],
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    "O status de verificação da sua conta é: $status",
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                /*if (refreshingStatus)
-                  const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                else
-                  IconButton(
-                    onPressed: apiKey == null ? null : () => _refreshAsaasStatus(apiKey),
-                    icon: const Icon(Icons.refresh, size: 20),
-                  ),*/
-              ],
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              "Você precisa ter sua conta aprovada para receber pagamentos.",
-              style: TextStyle(fontSize: 12),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /*Future<void> _refreshAsaasStatus(String apiKey) async {
-    setState(() => refreshingStatus = true);
-    final statusData = await AsaasService.getAccountStatus(apiKey);
-    if (statusData != null) {
-      final String generalStatus = statusData['general'];
-      await FirebaseFirestore.instance.collection("users").doc(widget.usuario.id).update({
-        "instrutor.asaasStatus": generalStatus,
-      });
-    }
-    setState(() => refreshingStatus = false);
-  }*/
 
   Widget _buildStatusServico(bool isActive) {
     return Card(

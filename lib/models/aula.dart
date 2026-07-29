@@ -15,6 +15,7 @@ enum LessonVehicle {aluno, instrutor}
 enum PaymentType {pix, credito, debito, dinheiro}
 enum JourneyState {none, requested, enRoute, arrived}
 enum SessionStatus {scheduled, completed, missed}
+enum TransferStatus {naoDisponivel, disponivel, transferido}
 
 class SessaoAula {
   String id;
@@ -89,6 +90,10 @@ class Aula {
   LessonPrice price;
   PaymentType paymentType;
   Map<String, dynamic>? liveLocation;
+  String? paymentStatus;
+  String? paymentId;
+  String? invoiceUrl;
+  TransferStatus transferStatus;
 
   Aula({
     required this.id,
@@ -106,6 +111,10 @@ class Aula {
     required this.price,
     required this.paymentType,
     this.liveLocation,
+    this.paymentStatus,
+    this.paymentId,
+    this.invoiceUrl,
+    this.transferStatus = TransferStatus.naoDisponivel,
   });
 
 
@@ -126,6 +135,10 @@ class Aula {
       'price': price.toMap(),
       'paymentType' : paymentType.name,
       'liveLocation': liveLocation,
+      'paymentStatus': paymentStatus,
+      'paymentId': paymentId,
+      'invoiceUrl': invoiceUrl,
+      'transferStatus': transferStatus.name,
     };
   }
 
@@ -146,12 +159,40 @@ class Aula {
       price: LessonPrice.fromMap(map['price'] as Map<String,dynamic>),
       paymentType: PaymentType.values.where((e)=> e.name == map['paymentType']).first,
       liveLocation: map['liveLocation'] as Map<String, dynamic>?,
+      paymentStatus: map['paymentStatus'] as String?,
+      paymentId: map['paymentId'] as String?,
+      invoiceUrl: map['invoiceUrl'] as String?,
+      transferStatus: map['transferStatus'] != null 
+        ? TransferStatus.values.where((e) => e.name == map['transferStatus']).first 
+        : TransferStatus.naoDisponivel,
     );
   }
 
   String toJson() => json.encode(toMap());
 
   factory Aula.fromJson(String source) => Aula.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  String transferStatusValue() {
+    switch (transferStatus) {
+      case TransferStatus.naoDisponivel:
+        return "Não disponível para transferência";
+      case TransferStatus.disponivel:
+        return "Disponível para transferência";
+      case TransferStatus.transferido:
+        return "Transferido";
+    }
+  }
+
+  Color transferStatusColor() {
+    switch (transferStatus) {
+      case TransferStatus.naoDisponivel:
+        return Colors.grey;
+      case TransferStatus.disponivel:
+        return Colors.amber[800]!;
+      case TransferStatus.transferido:
+        return Colors.green;
+    }
+  }
 
   Color statusColor(){
     switch (status) {

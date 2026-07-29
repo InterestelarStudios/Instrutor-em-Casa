@@ -1,0 +1,4 @@
+class AsaasConfig {
+  static const String sandboxApiKey = 'YOUR_SANDBOX_API_KEY_HERE';
+  static const String prodApiKey = 'YOUR_PRODUCTION_API_KEY_HERE';
+}
