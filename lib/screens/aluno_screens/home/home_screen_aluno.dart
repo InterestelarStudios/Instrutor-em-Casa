@@ -196,9 +196,9 @@ class _HomeScreenAlunoState extends State<HomeScreenAluno> with AutomaticKeepAli
   }
 
   Widget _buildMapCard() {
-    if (widget.position == null) {
-      return const LoadingBox(height: 180);
-    }
+    final LatLng mapTarget = widget.position != null
+        ? LatLng(widget.position!.latitude, widget.position!.longitude)
+        : const LatLng(-23.550520, -46.633308);
 
     return Container(
       height: 220,
@@ -213,14 +213,16 @@ class _HomeScreenAlunoState extends State<HomeScreenAluno> with AutomaticKeepAli
           GoogleMap(
             mapType: MapType.normal,
             initialCameraPosition: CameraPosition(
-              target: LatLng(widget.position!.latitude, widget.position!.longitude),
-              zoom: 13
+              target: mapTarget,
+              zoom: 13,
             ),
             zoomControlsEnabled: false,
-            myLocationEnabled: true,
+            myLocationEnabled: widget.position != null,
             myLocationButtonEnabled: false,
             onMapCreated: (GoogleMapController controller) {
-              _controller.complete(controller);
+              if (!_controller.isCompleted) {
+                _controller.complete(controller);
+              }
             },
             style: mapStyle,
           ),
@@ -236,10 +238,10 @@ class _HomeScreenAlunoState extends State<HomeScreenAluno> with AutomaticKeepAli
                   builder: (context) {
                     return BuscarInstrutores(
                       usuario: widget.usuario,
-                      position: LatLng(widget.position!.latitude, widget.position!.longitude),
+                      position: mapTarget,
                       style: mapStyle,
                     );
-                  }
+                  },
                 );
               },
               icon: const Icon(Iconsax.location, size: 20),

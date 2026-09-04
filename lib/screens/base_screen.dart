@@ -53,13 +53,14 @@ class _BaseScreenState extends State<BaseScreen> {
   Future<void> _checkAllPermissions() async {
     final location = await Permission.location.isGranted;
     final camera = await Permission.camera.isGranted;
-    final storage = await Permission.storage.isGranted;
     final notification = await Permission.notification.isGranted;
 
-    setState(() {
-      allPermissionsGranted = location && camera && storage && notification;
-      checkingPermissions = false;
-    });
+    if (mounted) {
+      setState(() {
+        allPermissionsGranted = location && camera && notification;
+        checkingPermissions = false;
+      });
+    }
   }
 
 

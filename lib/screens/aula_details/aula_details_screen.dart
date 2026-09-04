@@ -845,19 +845,6 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
     DialogServices.loading2(context);
 
     try {
-      String? customerId = widget.usuario.asaasId;
-      if (customerId == null) {
-        final userDoc = await FirebaseFirestore.instance.collection("users").doc(widget.usuario.id).get();
-        customerId = userDoc.data()?['asaasId'];
-        if (customerId == null) {
-          customerId = await AsaasService.createCustomer(widget.usuario);
-          if (customerId == null) throw "Erro ao obter ou criar perfil do cliente no Asaas.";
-          await FirebaseFirestore.instance.collection("users").doc(widget.usuario.id).update({
-            "asaasId": customerId,
-          });
-        }
-      }
-
       String billingType = 'PIX';
       if (newType == PaymentType.credito) {
         billingType = 'CREDIT_CARD';
@@ -867,28 +854,14 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
 
       final payment = await AsaasService.createPayment(
         aula: aula,
-        customerId: customerId,
         billingType: billingType,
       );
 
       if (payment == null) throw "Erro ao criar novo pagamento no Asaas.";
 
-      final String paymentId = payment['id'];
-      final String invoiceUrl = payment['invoiceUrl'];
-      final String paymentStatus = payment['status'] ?? 'PENDING';
-
-      await FirebaseFirestore.instance.collection("cobrancas").doc(paymentId).set({
-        'id': paymentId,
-        'aulaId': aula.id,
-        'alunoId': widget.usuario.id,
-        'alunoName': widget.usuario.name,
-        'value': payment['value'] ?? aula.price.amount,
-        'billingType': billingType == 'UNDEFINED' ? 'DEBIT_CARD' : billingType,
-        'status': paymentStatus,
-        'invoiceUrl': invoiceUrl,
-        'dueDate': payment['dueDate'],
-        'created': FieldValue.serverTimestamp(),
-      });
+      final String paymentId = payment['paymentId'] ?? '';
+      final String invoiceUrl = payment['invoiceUrl'] ?? '';
+      final String paymentStatus = payment['paymentStatus'] ?? 'PENDING';
 
       await FirebaseFirestore.instance.collection("aulas").doc(aula.id).update({
         'paymentId': paymentId,

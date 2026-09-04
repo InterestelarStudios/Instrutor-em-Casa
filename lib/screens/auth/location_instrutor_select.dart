@@ -23,13 +23,22 @@ class _InstrutorLocationPickerState extends State<InstrutorLocationPicker> {
   bool loading = false;
 
   void pickPosition() async {
-    final pickedPosition = await LocationServices().pickCurrentLocation(context);
-    if(pickedPosition != null){
-      setState(() {
-        loadingLocation = false;
+    try {
+      final pickedPosition = await LocationServices().pickCurrentLocation(context);
+      if (pickedPosition != null) {
         position = LatLng(pickedPosition.latitude, pickedPosition.longitude);
-        updateMarker();
-      });
+      } else {
+        position = const LatLng(-23.550520, -46.633308); // Fallback SP
+      }
+    } catch (_) {
+      position = const LatLng(-23.550520, -46.633308);
+    } finally {
+      if (mounted) {
+        setState(() {
+          loadingLocation = false;
+          updateMarker();
+        });
+      }
     }
   }
 

@@ -30,25 +30,39 @@ class _AlunoBaseScreenState extends State<AlunoBaseScreen> {
   double opacity = 0;
 
   void obterEnderecoAtual() async {
-    // 1. Verifica se o serviço de localização (GPS) está ligado
-    position = await LocationServices().pickCurrentLocation(context);
+    try {
+      // 1. Verifica se o serviço de localização (GPS) está ligado
+      position = await LocationServices().pickCurrentLocation(context);
 
-    // 4. Geocoding: Transforma coordenadas em endereço
-    List<Placemark> locais = await placemarkFromCoordinates(
-      position!.latitude,
-      position!.longitude,
-    );
+      if (position != null) {
+        // Geocoding: Transforma coordenadas em endereço
+        List<Placemark> locais = await placemarkFromCoordinates(
+          position!.latitude,
+          position!.longitude,
+        );
 
-    if (locais.isNotEmpty) {
-      Placemark place = locais[0];
-      debugPrint(place.toJson().toString());
-      // Você pode personalizar o que retornar aqui (rua, bairro, cidade, etc.)
-      locale = "${place.subAdministrativeArea} - ${place.administrativeArea}";
+        if (locais.isNotEmpty) {
+          Placemark place = locais[0];
+          final subAdmin = place.subAdministrativeArea ?? place.locality ?? '';
+          final admin = place.administrativeArea ?? '';
+          if (subAdmin.isNotEmpty && admin.isNotEmpty) {
+            locale = "$subAdmin - $admin";
+          } else if (subAdmin.isNotEmpty) {
+            locale = subAdmin;
+          } else if (admin.isNotEmpty) {
+            locale = admin;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Erro ao obter endereço do aluno: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          loadingLocation = false;
+        });
+      }
     }
-
-    setState((){
-      loadingLocation = false;
-    });
   }
 
   @override

@@ -29,50 +29,52 @@ class _InstrutorBaseScreenState extends State<InstrutorBaseScreen> {
   double opacity = 0;
 
   void obterEnderecoAtual() async {
-    bool servicoAtivo;
-    LocationPermission permissao;
+    try {
+      // 1. Verifica se o serviço de localização (GPS) está ligado
+      final servicoAtivo = await Geolocator.isLocationServiceEnabled();
+      if (!servicoAtivo) return;
 
-    // 1. Verifica se o serviço de localização (GPS) está ligado
-    servicoAtivo = await Geolocator.isLocationServiceEnabled();
-    if (!servicoAtivo) {
-      return Future.error('O serviço de localização está desativado.');
-    }
-
-    // 2. Verifica e solicita permissão
-    permissao = await Geolocator.checkPermission();
-    if (permissao == LocationPermission.denied) {
-      permissao = await Geolocator.requestPermission();
+      // 2. Verifica e solicita permissão
+      LocationPermission permissao = await Geolocator.checkPermission();
       if (permissao == LocationPermission.denied) {
-        return Future.error('Permissão de localização negada.');
+        permissao = await Geolocator.requestPermission();
+        if (permissao == LocationPermission.denied) return;
+      }
+
+      if (permissao == LocationPermission.deniedForever) return;
+
+      // 3. Pega a posição atual (Latitude e Longitude)
+      position = await Geolocator.getCurrentPosition();
+
+      if (position != null) {
+        // 4. Geocoding: Transforma coordenadas em endereço
+        List<Placemark> locais = await placemarkFromCoordinates(
+          position!.latitude,
+          position!.longitude,
+        );
+
+        if (locais.isNotEmpty) {
+          Placemark place = locais[0];
+          final subAdmin = place.subAdministrativeArea ?? place.locality ?? '';
+          final admin = place.administrativeArea ?? '';
+          if (subAdmin.isNotEmpty && admin.isNotEmpty) {
+            locale = "$subAdmin - $admin";
+          } else if (subAdmin.isNotEmpty) {
+            locale = subAdmin;
+          } else if (admin.isNotEmpty) {
+            locale = admin;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Erro ao obter endereço do instrutor: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          loadingLocation = false;
+        });
       }
     }
-
-    if (permissao == LocationPermission.deniedForever) {
-      return Future.error('As permissões de localização foram negadas permanentemente.');
-    }
-
-    // 3. Pega a posição atual (Latitude e Longitude)
-    position = await Geolocator.getCurrentPosition();
-
-    // 4. Geocoding: Transforma coordenadas em endereço
-    List<Placemark> locais = await placemarkFromCoordinates(
-      position!.latitude,
-      position!.longitude,
-    );
-
-    if (locais.isNotEmpty) {
-      Placemark place = locais[0];
-      debugPrint(place.toJson().toString());
-      // Você pode personalizar o que retornar aqui (rua, bairro, cidade, etc.)
-      locale = "${place.subAdministrativeArea} - ${place.administrativeArea}";
-    }
-
-    if(mounted){
-      setState((){
-        loadingLocation = false;
-      });
-    }
-
   }
 
   @override

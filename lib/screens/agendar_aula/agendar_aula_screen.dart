@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -270,19 +271,7 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
     DialogServices.loading2(context);
 
     try {
-      // 0. (Validar instrutor pode receber pagamentos via plataforma? Atualmente 100% responsabilidade da plataforma, sem necessidade de walletId)
-
-      // 1. Verificar/Criar Cliente no Asaas (Aluno)
-      String? customerId = widget.myUser.asaasId;
-      if (customerId == null) {
-        customerId = await AsaasService.createCustomer(widget.myUser);
-        if (customerId == null) throw "Erro ao criar seu perfil de cliente no Asaas. Verifique seus dados.";
-        await FirebaseFirestore.instance.collection("users").doc(widget.myUser.id).update({
-          "asaasId": customerId,
-        });
-      }
-
-      // 2. Preparar Aula
+      // 1. Preparar Aula
       final firestore = FirebaseFirestore.instance.collection("aulas").doc();
       final aula = Aula(
         id: firestore.id,
@@ -301,101 +290,36 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
         paymentType: paymentType!,
       );
 
-      String? paymentId;
-      String? invoiceUrl;
-      String? paymentStatus;
-
-      // 3. Processar Pagamento conforme tipo
+      String billingTypeStr;
       if (paymentType == PaymentType.pix) {
-        final payment = await AsaasService.createPayment(
-          aula: aula,
-          customerId: customerId,
-          billingType: 'PIX',
-        );
-
-        if (payment == null) throw "Não foi possível gerar o QR Code PIX no momento.";
-
-        paymentId = payment['id'];
-        invoiceUrl = payment['invoiceUrl'];
-        paymentStatus = payment['status'] ?? 'PENDING';
-
-        await FirebaseFirestore.instance.collection("cobrancas").doc(paymentId).set({
-          'id': paymentId,
-          'aulaId': aula.id,
-          'alunoId': widget.myUser.id,
-          'alunoName': widget.myUser.name,
-          'value': payment['value'] ?? price.amount,
-          'billingType': 'PIX',
-          'status': paymentStatus,
-          'invoiceUrl': invoiceUrl,
-          'dueDate': payment['dueDate'],
-          'created': FieldValue.serverTimestamp(),
-        });
-
-        Navigator.pop(context); // Fecha loading
-        await showPixDialog(invoiceUrl!, paymentId!);
-      } else if (paymentType == PaymentType.debito) {
-        final payment = await AsaasService.createPayment(
-          aula: aula,
-          customerId: customerId,
-          billingType: 'UNDEFINED',
-        );
-
-        if (payment == null) throw "Não foi possível gerar a fatura de débito.";
-
-        paymentId = payment['id'];
-        invoiceUrl = payment['invoiceUrl'];
-        paymentStatus = payment['status'] ?? 'PENDING';
-
-        await FirebaseFirestore.instance.collection("cobrancas").doc(paymentId).set({
-          'id': paymentId,
-          'aulaId': aula.id,
-          'alunoId': widget.myUser.id,
-          'alunoName': widget.myUser.name,
-          'value': payment['value'] ?? price.amount,
-          'billingType': 'DEBIT_CARD',
-          'status': paymentStatus,
-          'invoiceUrl': invoiceUrl,
-          'dueDate': payment['dueDate'],
-          'created': FieldValue.serverTimestamp(),
-        });
-
-        Navigator.pop(context); // Fecha loading
-        await launchUrl(Uri.parse(invoiceUrl!));
+        billingTypeStr = 'PIX';
       } else if (paymentType == PaymentType.credito) {
-        final payment = await AsaasService.createPayment(
-          aula: aula,
-          customerId: customerId,
-          billingType: 'CREDIT_CARD',
-        );
-        if (payment == null) throw "Não foi possível gerar a fatura de crédito.";
-
-        paymentId = payment['id'];
-        invoiceUrl = payment['invoiceUrl'];
-        paymentStatus = payment['status'] ?? 'PENDING';
-
-        await FirebaseFirestore.instance.collection("cobrancas").doc(paymentId).set({
-          'id': paymentId,
-          'aulaId': aula.id,
-          'alunoId': widget.myUser.id,
-          'alunoName': widget.myUser.name,
-          'value': payment['value'] ?? price.amount,
-          'billingType': 'CREDIT_CARD',
-          'status': paymentStatus,
-          'invoiceUrl': invoiceUrl,
-          'dueDate': payment['dueDate'],
-          'created': FieldValue.serverTimestamp(),
-        });
-
-        Navigator.pop(context); // Fecha loading
-        await launchUrl(Uri.parse(invoiceUrl!));
+        billingTypeStr = 'CREDIT_CARD';
+      } else {
+        billingTypeStr = 'UNDEFINED';
       }
+
+      // 2. Processar Pagamento de forma 100% segura via Cloud Functions
+      final payment = await AsaasService.createPayment(
+        aula: aula,
+        billingType: billingTypeStr,
+      );
+
+      if (payment == null) {
+        throw "Não foi possível processar a cobrança no momento.";
+      }
+
+      final String paymentId = payment['paymentId'] ?? '';
+      final String? invoiceUrl = payment['invoiceUrl'];
+      final String paymentStatus = payment['paymentStatus'] ?? 'PENDING';
+      final String? pixQrCode = payment['pixQrCode'];
+      final String? pixPayload = payment['pixPayload'];
 
       aula.paymentId = paymentId;
       aula.invoiceUrl = invoiceUrl;
-      aula.paymentStatus = paymentStatus ?? 'PENDING';
+      aula.paymentStatus = paymentStatus;
 
-      // 4. Salvar Aula no Firestore
+      // 3. Salvar Aula no Firestore
       await firestore.set(aula.toMap());
 
       setState(() {
@@ -403,26 +327,43 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
         processingPayment = false;
       });
 
-      final navigator = Navigator.of(context);
-      navigator.popUntil((route) => route.isFirst);
-      
-      DialogServices.paymentAlert(
-        navigator.context,
-        success: true,
-        message: "Proposta enviada, fique atento para a resposta do instrutor!"
-      );
+      if (mounted) {
+        Navigator.pop(context); // Fecha loading
+      }
 
+      if (paymentType == PaymentType.pix) {
+        await showPixDialog(
+          invoiceUrl: invoiceUrl,
+          pixQrCode: pixQrCode,
+          pixPayload: pixPayload,
+        );
+      } else if (invoiceUrl != null) {
+        await launchUrl(Uri.parse(invoiceUrl));
+      }
+
+      if (mounted) {
+        final navigator = Navigator.of(context);
+        navigator.popUntil((route) => route.isFirst);
+        DialogServices.paymentAlert(
+          navigator.context,
+          success: true,
+          message: "Proposta enviada, fique atento para a resposta do instrutor!",
+        );
+      }
     } catch (e) {
-      setState(() => processingPayment = false);
-      Navigator.pop(context); // Fecha loading
-      DialogServices().alertDialog(context, "Erro no pagamento: $e");
+      if (mounted) {
+        setState(() => processingPayment = false);
+        Navigator.pop(context); // Fecha loading
+        DialogServices().alertDialog(context, "Erro no pagamento: $e");
+      }
     }
   }
 
-  Future<void> showPixDialog(String invoiceUrl, String paymentId) async {
-    // Nota: Para obter o código PIX copia e cola e o QR Code real, 
-    // você precisaria chamar GET /v3/payments/{id}/pixQrCode
-    // Aqui vamos simplificar mostrando o link da fatura ou um placeholder.
+  Future<void> showPixDialog({
+    String? invoiceUrl,
+    String? pixQrCode,
+    String? pixPayload,
+  }) async {
     await showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -440,34 +381,70 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              const SizedBox(height: 12),
+              const Text(
+                "Escaneie o QR Code no app do seu banco ou copie a chave Pix Copia e Cola:",
+                style: TextStyle(fontSize: 13),
+              ),
               const SizedBox(height: 16),
-              const Text("Escaneie o QR Code ou use o link abaixo para pagar:"),
-              const SizedBox(height: 20),
               Center(
-                child: SizedBox(
-                  width: 200,
-                  height: 200,
-                  child: QrImageView(
-                    data: invoiceUrl,
-                    version: QrVersions.auto,
-                    size: 200.0,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[300]!),
                   ),
+                  child: pixQrCode != null
+                      ? Image.memory(
+                          base64Decode(pixQrCode),
+                          width: 200,
+                          height: 200,
+                        )
+                      : (pixPayload != null
+                          ? QrImageView(
+                              data: pixPayload,
+                              version: QrVersions.auto,
+                              size: 200.0,
+                            )
+                          : (invoiceUrl != null
+                              ? QrImageView(
+                                  data: invoiceUrl,
+                                  version: QrVersions.auto,
+                                  size: 200.0,
+                                )
+                              : const SizedBox(
+                                  width: 200,
+                                  height: 200,
+                                  child: Center(child: Text("Sem QR Code")),
+                                ))),
                 ),
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: invoiceUrl));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Link copiado!")),
-                  );
-                },
-                child: const Text("Copiar Link de Pagamento"),
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              if (pixPayload != null && pixPayload.isNotEmpty) ...[
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: pixPayload));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Código Pix Copia e Cola copiado!")),
+                    );
+                  },
+                  icon: const Icon(Icons.copy, size: 18),
+                  label: const Text("Copiar Pix Copia e Cola"),
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (invoiceUrl != null && invoiceUrl.isNotEmpty) ...[
+                OutlinedButton.icon(
+                  onPressed: () => launchUrl(Uri.parse(invoiceUrl)),
+                  icon: const Icon(Icons.open_in_browser, size: 18),
+                  label: const Text("Abrir Fatura Completa"),
+                ),
+                const SizedBox(height: 8),
+              ],
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text("Já paguei"),
+                child: const Text("Concluir"),
               ),
             ],
           ),
