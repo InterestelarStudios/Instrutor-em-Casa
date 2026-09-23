@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:instrutor_em_casa/models/instrutor.dart';
 import 'package:instrutor_em_casa/models/usuario.dart';
 import 'package:instrutor_em_casa/screens/auth/location_instrutor_select.dart';
@@ -72,7 +73,7 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
               _buildCategoriasCard(),
               const SizedBox(height: AppSpacing.sectionGap),
               _buildSectionTitle("Área de Atuação"),
-              _buildLocalizacaoCard(),
+              _buildLocalizacaoCard(liveUser),
               const SizedBox(height: AppSpacing.sectionGap),
 
               // Veículo Padrão e Gerenciamento
@@ -248,14 +249,18 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
                 if (value) {
                   List<String> errors = [];
 
-                  if (credencialStatus != DocumentStatus.approved)
+                  if (credencialStatus != DocumentStatus.approved) {
                     errors.add("Credencial não aprovada");
-                  if (faceStatus != DocumentStatus.approved)
+                  }
+                  if (faceStatus != DocumentStatus.approved) {
                     errors.add("Foto do rosto não aprovada");
-                  if (selectedCategories.isEmpty)
+                  }
+                  if (selectedCategories.isEmpty) {
                     errors.add("Nenhuma categoria de aula selecionada");
-                  if (liveUser.instrutor?.defaultVehicle == null)
+                  }
+                  if (liveUser.instrutor?.defaultVehicle == null) {
                     errors.add("Nenhum veículo cadastrado/selecionado");
+                  }
 
                   if (errors.isNotEmpty) {
                     showDialog(
@@ -383,20 +388,31 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
     );
   }
 
-  Widget _buildLocalizacaoCard() {
+  Widget _buildLocalizacaoCard(Usuario liveUser) {
+    String locationText = "Toque para configurar sua localização";
+    LatLng? initialPos;
+
+    if (liveUser.geo != null && liveUser.geo!['geopoint'] != null) {
+      final gp = liveUser.geo!['geopoint'];
+      if (gp is GeoPoint) {
+        initialPos = LatLng(gp.latitude, gp.longitude);
+        locationText = "Ponto configurado (${gp.latitude.toStringAsFixed(3)}, ${gp.longitude.toStringAsFixed(3)})";
+      }
+    }
+
     return Card(
       child: ListTile(
         leading: Icon(Ionicons.map_outline, color: AppColors.primary),
-        title: const Text("Localização"),
-        subtitle: const Text(
-          "Tarumã, Amazonas",
-        ), // Placeholder or reverse geocoding result
+        title: const Text("Localização de Atendimento"),
+        subtitle: Text(locationText),
         trailing: const Icon(Icons.chevron_right, color: AppColors.primary),
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const InstrutorLocationPicker(),
+              builder: (context) => InstrutorLocationPicker(
+                initialPosition: initialPos,
+              ),
             ),
           );
         },

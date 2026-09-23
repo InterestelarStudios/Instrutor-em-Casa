@@ -142,25 +142,36 @@ class UserData {
 }
 
 class AlunoData {
+  UserDocument? certidaoTeorica;
   UserDocument? ladv;
   UserDocument? cnh;
 
   AlunoData({
+    this.certidaoTeorica,
     this.ladv,
     this.cnh,
   });
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
+      'certidaoTeorica': certidaoTeorica?.toMap(),
       'ladv': ladv?.toMap(),
       'cnh': cnh?.toMap(),
     };
   }
 
   factory AlunoData.fromMap(Map<String, dynamic> map) {
+    final UserDocument? parsedCertidao = map['certidaoTeorica'] != null
+        ? UserDocument.fromMap(map['certidaoTeorica'] as Map<String, dynamic>)
+        : null;
+    final UserDocument? parsedLadv = map['ladv'] != null
+        ? UserDocument.fromMap(map['ladv'] as Map<String, dynamic>)
+        : null;
+
     return AlunoData(
-      ladv: map['ladv'] != null ? UserDocument.fromMap(map['ladv'] as Map<String,dynamic>) : null,
-      cnh: map['cnh'] != null ? UserDocument.fromMap(map['cnh'] as Map<String,dynamic>) : null,
+      certidaoTeorica: parsedCertidao ?? parsedLadv,
+      ladv: parsedLadv,
+      cnh: map['cnh'] != null ? UserDocument.fromMap(map['cnh'] as Map<String, dynamic>) : null,
     );
   }
 }

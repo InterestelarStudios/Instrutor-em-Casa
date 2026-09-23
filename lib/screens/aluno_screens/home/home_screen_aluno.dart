@@ -10,6 +10,7 @@ import 'package:instrutor_em_casa/models/usuario.dart';
 import 'package:instrutor_em_casa/screens/aluno_screens/buscar_instrutores/buscar_instrutores.dart';
 import 'package:instrutor_em_casa/screens/aula_details/aula_details_screen.dart';
 import 'package:instrutor_em_casa/screens/profile/horas_direcao_screen.dart';
+import 'package:instrutor_em_casa/services/location_services.dart';
 import 'package:instrutor_em_casa/widgets/active_lesson_widget.dart';
 import 'package:instrutor_em_casa/widgets/loading_box.dart';
 import 'package:instrutor_em_casa/widgets/theme.dart';
@@ -26,25 +27,92 @@ class HomeScreenAluno extends StatefulWidget {
   State<HomeScreenAluno> createState() => _HomeScreenAlunoState();
 }
 
-class _HomeScreenAlunoState extends State<HomeScreenAluno> with AutomaticKeepAliveClientMixin{
+class _HomeScreenAlunoState extends State<HomeScreenAluno> with AutomaticKeepAliveClientMixin {
   final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
   String? mapStyle;
+  Position? _currentPosition;
 
   Future<void> loadMapStyle() async {
     try {
       String style = await rootBundle.loadString('assets/map_style.json');
-      setState(() {
-        mapStyle = style;
-      });
+      if (mounted) {
+        setState(() {
+          mapStyle = style;
+        });
+      }
     } catch (e) {
       debugPrint("Erro ao carregar estilo: $e");
+    }
+  }
+
+  Future<void> _fetchLocationIfNull() async {
+    if (_currentPosition == null) {
+      try {
+        final pos = await LocationServices().pickCurrentLocation(context);
+        if (pos != null && mounted) {
+          setState(() {
+            _currentPosition = pos;
+          });
+          _animateToPosition(pos);
+        }
+      } catch (e) {
+        debugPrint("Erro ao obter localização inicial: $e");
+      }
+    }
+  }
+
+  Future<Position?> _ensurePosition() async {
+    if (_currentPosition != null) return _currentPosition;
+    if (widget.position != null) return widget.position;
+    try {
+      final pos = await LocationServices().pickCurrentLocation(context);
+      if (pos != null && mounted) {
+        setState(() {
+          _currentPosition = pos;
+        });
+        _animateToPosition(pos);
+      }
+      return pos;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _animateToPosition(Position pos) async {
+    try {
+      final controller = await _controller.future;
+      controller.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(pos.latitude, pos.longitude),
+            zoom: 14,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint("Erro ao mover câmera: $e");
     }
   }
 
   @override
   void initState() {
     super.initState();
+    _currentPosition = widget.position;
     loadMapStyle();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchLocationIfNull();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeScreenAluno oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.position != null && widget.position != oldWidget.position) {
+      setState(() {
+        _currentPosition = widget.position;
+      });
+      _animateToPosition(widget.position!);
+    }
   }
 
   @override
@@ -196,8 +264,9 @@ class _HomeScreenAlunoState extends State<HomeScreenAluno> with AutomaticKeepAli
   }
 
   Widget _buildMapCard() {
-    final LatLng mapTarget = widget.position != null
-        ? LatLng(widget.position!.latitude, widget.position!.longitude)
+    final effectivePos = _currentPosition ?? widget.position;
+    final LatLng mapTarget = effectivePos != null
+        ? LatLng(effectivePos.latitude, effectivePos.longitude)
         : const LatLng(-23.550520, -46.633308);
 
     return Container(
@@ -214,14 +283,24 @@ class _HomeScreenAlunoState extends State<HomeScreenAluno> with AutomaticKeepAli
             mapType: MapType.normal,
             initialCameraPosition: CameraPosition(
               target: mapTarget,
-              zoom: 13,
+              zoom: 14,
             ),
             zoomControlsEnabled: false,
-            myLocationEnabled: widget.position != null,
-            myLocationButtonEnabled: false,
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
             onMapCreated: (GoogleMapController controller) {
               if (!_controller.isCompleted) {
                 _controller.complete(controller);
+              }
+              if (effectivePos != null) {
+                controller.animateCamera(
+                  CameraUpdate.newCameraPosition(
+                    CameraPosition(
+                      target: LatLng(effectivePos.latitude, effectivePos.longitude),
+                      zoom: 14,
+                    ),
+                  ),
+                );
               }
             },
             style: mapStyle,
@@ -231,14 +310,20 @@ class _HomeScreenAlunoState extends State<HomeScreenAluno> with AutomaticKeepAli
             left: 15,
             right: 15,
             child: ElevatedButton.icon(
-              onPressed: () {
+              onPressed: () async {
+                Position? pos = await _ensurePosition();
+                final LatLng target = pos != null
+                    ? LatLng(pos.latitude, pos.longitude)
+                    : mapTarget;
+
+                if (!context.mounted) return;
                 showDialog(
                   context: context,
                   useSafeArea: false,
                   builder: (context) {
                     return BuscarInstrutores(
                       usuario: widget.usuario,
-                      position: mapTarget,
+                      position: target,
                       style: mapStyle,
                     );
                   },
@@ -269,26 +354,30 @@ class _HomeScreenAlunoState extends State<HomeScreenAluno> with AutomaticKeepAli
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.md),
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
         itemBuilder: (context, index) {
           final cat = categories[index];
           return GestureDetector(
-            onTap: () {
-              // Trigger search with this category pre-selected
-              if (widget.position != null) {
-                showDialog(
-                  context: context,
-                  useSafeArea: false,
-                  builder: (context) {
-                    return BuscarInstrutores(
-                      usuario: widget.usuario,
-                      position: LatLng(widget.position!.latitude, widget.position!.longitude),
-                      style: mapStyle,
-                      initialCategory: cat['name'] as String,
-                    );
-                  }
-                );
-              }
+            onTap: () async {
+              Position? pos = await _ensurePosition();
+              final effectivePos = pos ?? _currentPosition ?? widget.position;
+              final LatLng target = effectivePos != null
+                  ? LatLng(effectivePos.latitude, effectivePos.longitude)
+                  : const LatLng(-23.550520, -46.633308);
+
+              if (!context.mounted) return;
+              showDialog(
+                context: context,
+                useSafeArea: false,
+                builder: (context) {
+                  return BuscarInstrutores(
+                    usuario: widget.usuario,
+                    position: target,
+                    style: mapStyle,
+                    initialCategory: cat['name'] as String,
+                  );
+                },
+              );
             },
             child: Column(
               children: [

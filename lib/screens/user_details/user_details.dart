@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ui_firestore/firebase_ui_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:instrutor_em_casa/models/precos_config.dart';
 import 'package:instrutor_em_casa/models/usuario.dart';
 import 'package:instrutor_em_casa/screens/agendar_aula/agendar_aula_screen.dart';
+import 'package:instrutor_em_casa/services/precos_service.dart';
 import 'package:instrutor_em_casa/widgets/avatar.dart';
 import 'package:instrutor_em_casa/widgets/stars.dart';
 import 'package:instrutor_em_casa/widgets/theme.dart';
@@ -245,23 +249,47 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     );
   }
 
+  PrecosConfig _precosConfig = const PrecosConfig();
+  StreamSubscription<PrecosConfig>? _precosSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _precosSub = PrecosService.streamPrecos().listen((precos) {
+      if (mounted) {
+        setState(() {
+          _precosConfig = precos;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _precosSub?.cancel();
+    super.dispose();
+  }
+
   Widget _buildCategoriesChips() {
     final categories = widget.usuario.instrutor?.categories ?? [];
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: categories.map((cat) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.primary50,
-          borderRadius: AppRadius.radiusFull,
-          border: Border.all(color: AppColors.primary100),
-        ),
-        child: Text(
-          "Cat. ${cat.name}",
-          style: AppTextStyles.label.copyWith(color: AppColors.primary600, fontWeight: FontWeight.bold),
-        ),
-      )).toList(),
+      children: categories.map((cat) {
+        final price = _precosConfig.getPriceForCategory(cat);
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.primary50,
+            borderRadius: AppRadius.radiusFull,
+            border: Border.all(color: AppColors.primary100),
+          ),
+          child: Text(
+            "Cat. ${cat.name} • R\$ ${price.toStringAsFixed(0)}/h",
+            style: AppTextStyles.label.copyWith(color: AppColors.primary600, fontWeight: FontWeight.bold),
+          ),
+        );
+      }).toList(),
     );
   }
 

@@ -8,8 +8,10 @@ import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:instrutor_em_casa/models/instrutor.dart';
+import 'package:instrutor_em_casa/models/precos_config.dart';
 import 'package:instrutor_em_casa/models/usuario.dart';
 import 'package:instrutor_em_casa/screens/user_details/user_details.dart';
+import 'package:instrutor_em_casa/services/precos_service.dart';
 import 'package:instrutor_em_casa/widgets/avatar.dart';
 import 'package:instrutor_em_casa/widgets/loading_box.dart';
 import 'package:instrutor_em_casa/widgets/stars.dart';
@@ -33,23 +35,36 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
   double radius = 10; // Default radius in Km
   String? selectedCategory;
 
+  PrecosConfig _precosConfig = const PrecosConfig();
+  StreamSubscription<PrecosConfig>? _precosSub;
+
   String _getHourPriceRange(Usuario instrutor) {
-    if (selectedCategory != null) {
-      return selectedCategory == 'A' ? '90' : '120';
-    }
     final categories = instrutor.instrutor?.categories ?? [];
-    if (categories.isEmpty) return '120';
-    
-    final hasCatA = categories.contains(CNHCategory.A);
-    final hasOthers = categories.any((c) => c != CNHCategory.A);
-    
-    if (hasCatA && hasOthers) {
-      return '90 - 120';
-    } else if (hasCatA) {
-      return '90';
-    } else {
-      return '120';
+    if (categories.isEmpty) {
+      return _precosConfig.categoriaB.toStringAsFixed(0);
     }
+
+    if (selectedCategory != null) {
+      final catEnum = CNHCategory.values.where((c) => c.name == selectedCategory).firstOrNull;
+      if (catEnum != null) {
+        return _precosConfig.getPriceForCategory(catEnum).toStringAsFixed(0);
+      }
+      return _precosConfig.categoriaB.toStringAsFixed(0);
+    }
+
+    // Calcula preços de todas as categorias atendidas pelo instrutor
+    final prices = categories.map((c) => _precosConfig.getPriceForCategory(c)).toSet().toList();
+    prices.sort();
+
+    if (prices.isEmpty) {
+      return _precosConfig.categoriaB.toStringAsFixed(0);
+    }
+
+    if (prices.length == 1 || prices.first == prices.last) {
+      return prices.first.toStringAsFixed(0);
+    }
+
+    return "${prices.first.toStringAsFixed(0)} - ${prices.last.toStringAsFixed(0)}";
   }
 
   Stream<List<DocumentSnapshot<Map<String, dynamic>>>> addListenersInstrutores() {
@@ -162,6 +177,19 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
     super.initState();
     selectedCategory = widget.initialCategory;
     stream = addListenersInstrutores();
+    _precosSub = PrecosService.streamPrecos().listen((precos) {
+      if (mounted) {
+        setState(() {
+          _precosConfig = precos;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _precosSub?.cancel();
+    super.dispose();
   }
   
   @override
@@ -195,10 +223,11 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
                 )
               },
               markers: {
-                const Marker(
-                  markerId: MarkerId('ponto_inicial'),
-                  position: LatLng(-23.5505, -46.6333),
-                  infoWindow: InfoWindow(title: 'Localização Selecionada'),
+                Marker(
+                  markerId: const MarkerId('ponto_inicial'),
+                  position: widget.position,
+                  infoWindow: const InfoWindow(title: 'Sua Localização'),
+                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
                 ),
               },
             ),
@@ -428,7 +457,7 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
         itemCount: categories.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
           if (index == 0) {
             final isAll = selectedCategory == null;

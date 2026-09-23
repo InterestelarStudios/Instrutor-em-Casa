@@ -7,7 +7,45 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:1021567319412:android:b00cd31c27aa7a6ba88021",
+        "android_client_info": {
+          "package_name": "com.example.instrutor_casa_adm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD1IczoVazUWXqOhtNYsDy1kXwSnSlDGAM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:1021567319412:android:7cae7ad2585448d1a88021",
+        "android_client_info": {
+          "package_name": "com.example.instrutor_em_casa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD1IczoVazUWXqOhtNYsDy1kXwSnSlDGAM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1021567319412:android:4015bc6b2fd16184a88021",
         "android_client_info": {
           "package_name": "com.interestelar.instrutor"
         }
@@ -15,7 +53,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBVdNY5IJwBEvBomVmukF9m336mFBdf3L8"
+          "current_key": "AIzaSyD1IczoVazUWXqOhtNYsDy1kXwSnSlDGAM"
         }
       ],
       "services": {

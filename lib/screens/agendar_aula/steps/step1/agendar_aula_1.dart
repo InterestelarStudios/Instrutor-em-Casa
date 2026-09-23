@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:instrutor_em_casa/models/aula.dart';
 import 'package:instrutor_em_casa/models/instrutor.dart';
+import 'package:instrutor_em_casa/models/precos_config.dart';
 import 'package:instrutor_em_casa/models/usuario.dart';
 import 'package:instrutor_em_casa/models/vehicle.dart';
 import 'package:instrutor_em_casa/screens/agendar_aula/widgets/selection_tile.dart';
@@ -17,6 +18,7 @@ class AgendarAula1 extends StatefulWidget {
     required this.instrutorCategories,
     required this.usuario,
     required this.defaultVehicle,
+    this.precosConfig,
   });
   final ValueChanged<CNHCategory> onChangedLessonCategory;
   final ValueChanged<LessonType> onChangedLessonType;
@@ -26,6 +28,7 @@ class AgendarAula1 extends StatefulWidget {
   final List<CNHCategory> instrutorCategories;
   final Usuario usuario;
   final Vehicle? defaultVehicle;
+  final PrecosConfig? precosConfig;
 
   @override
   State<AgendarAula1> createState() => _AgendarAula1State();
@@ -49,12 +52,13 @@ class _AgendarAula1State extends State<AgendarAula1> with AutomaticKeepAliveClie
   }
 
   void _validateAndChangeType(LessonType type) {
-    final bool hasLadv = widget.usuario.aluno?.ladv?.status == DocumentStatus.approved;
+    final bool hasCertidao = widget.usuario.aluno?.certidaoTeorica?.status == DocumentStatus.approved ||
+        widget.usuario.aluno?.ladv?.status == DocumentStatus.approved;
     final bool hasCnh = widget.usuario.aluno?.cnh?.status == DocumentStatus.approved;
 
     if (type == LessonType.obrigatorio || type == LessonType.treinamento) {
-      if (!hasLadv) {
-        _showDocError("LADV");
+      if (!hasCertidao) {
+        _showDocError("Certidão da Prova Teórica (Legislação)");
         return;
       }
     } else if (type == LessonType.habilitado) {
@@ -99,10 +103,20 @@ class _AgendarAula1State extends State<AgendarAula1> with AutomaticKeepAliveClie
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        sessionTitle("Categoria de Aula"),
+        sessionTitle(
+          "Categoria de Aula",
+          description: widget.precosConfig != null
+              ? "Taxa fixa de deslocamento de R\$ ${widget.precosConfig!.taxaDeslocamento.toStringAsFixed(2).replaceAll('.', ',')} inclusa no agendamento."
+              : null,
+        ),
         Wrap(
-          spacing: 5,
+          spacing: 8,
+          runSpacing: 8,
           children: widget.instrutorCategories.map((e){
+            final rate = widget.precosConfig?.getPriceForCategory(e);
+            final labelText = rate != null
+                ? "Cat. ${e.name} • R\$ ${rate.toStringAsFixed(0)}/h"
+                : e.name;
             return RawChip(
               onSelected: (value){
                 setState(() {
@@ -111,7 +125,7 @@ class _AgendarAula1State extends State<AgendarAula1> with AutomaticKeepAliveClie
                 });
               },
               selected: category == e,
-              label: Text(e.name),
+              label: Text(labelText),
             );
           }).toList(),
         ),
@@ -279,7 +293,7 @@ class _AgendarAula1State extends State<AgendarAula1> with AutomaticKeepAliveClie
 String lessonTypeTranslate(LessonType type){
   switch (type) {
     case LessonType.obrigatorio:
-      return "Aula obrigatória (LADV)";
+      return "Aula obrigatória (Legislação)";
     case LessonType.treinamento:
       return "Aula de treinamento";
     default:

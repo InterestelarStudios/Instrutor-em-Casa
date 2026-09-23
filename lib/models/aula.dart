@@ -93,6 +93,8 @@ class Aula {
   String? paymentStatus;
   String? paymentId;
   String? invoiceUrl;
+  String? pixPayload;
+  String? pixQrCode;
   TransferStatus transferStatus;
 
   Aula({
@@ -114,6 +116,8 @@ class Aula {
     this.paymentStatus,
     this.paymentId,
     this.invoiceUrl,
+    this.pixPayload,
+    this.pixQrCode,
     this.transferStatus = TransferStatus.naoDisponivel,
   });
 
@@ -138,6 +142,8 @@ class Aula {
       'paymentStatus': paymentStatus,
       'paymentId': paymentId,
       'invoiceUrl': invoiceUrl,
+      'pixPayload': pixPayload,
+      'pixQrCode': pixQrCode,
       'transferStatus': transferStatus.name,
     };
   }
@@ -162,6 +168,8 @@ class Aula {
       paymentStatus: map['paymentStatus'] as String?,
       paymentId: map['paymentId'] as String?,
       invoiceUrl: map['invoiceUrl'] as String?,
+      pixPayload: map['pixPayload'] as String?,
+      pixQrCode: map['pixQrCode'] as String?,
       transferStatus: map['transferStatus'] != null 
         ? TransferStatus.values.where((e) => e.name == map['transferStatus']).first 
         : TransferStatus.naoDisponivel,
@@ -265,9 +273,9 @@ class LessonPrice {
 
   factory LessonPrice.fromMap(Map<String, dynamic> map) {
     return LessonPrice(
-      amount: map['amount'] as double,
-      hourPrice: map['hourPrice'] as double,
-      distance: map['distance'] as double,
+      amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+      hourPrice: (map['hourPrice'] as num?)?.toDouble() ?? 0.0,
+      distance: (map['distance'] as num?)?.toDouble() ?? 0.0,
     );
   }
 

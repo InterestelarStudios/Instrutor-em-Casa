@@ -472,6 +472,174 @@ exports.createPaymentSession = onCall(async (request) => {
 });
 
 /**
+ * Executa a transferência PIX de repasse ao instrutor via API Asaas.
+ */
+exports.executeInstructorPayout = onCall(async (request) => {
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Usuário não autenticado.");
+    }
+
+    const { aulaId } = request.data || {};
+    if (!aulaId) {
+        throw new HttpsError("invalid-argument", "ID da aula não fornecido.");
+    }
+
+    // 1. Buscar a aula no Firestore
+    const aulaRef = admin.firestore().collection("aulas").doc(aulaId);
+    const aulaDoc = await aulaRef.get();
+    if (!aulaDoc.exists) {
+        throw new HttpsError("not-found", "Aula não encontrada.");
+    }
+
+    const aula = aulaDoc.data();
+
+    // 2. Verificar se está disponível para transferência
+    if (aula.transferStatus === "transferido") {
+        throw new HttpsError("failed-precondition", "O repasse desta aula já foi realizado.");
+    }
+
+    if (aula.transferStatus !== "disponivel" && aula.status !== "done") {
+        throw new HttpsError("failed-precondition", "A aula ainda não foi finalizada ou não está disponível para repasse.");
+    }
+
+    // 3. Buscar dados do instrutor para obter chave PIX
+    const instrutorId = aula.instrutor.id;
+    const instrutorDoc = await admin.firestore().collection("users").doc(instrutorId).get();
+    if (!instrutorDoc.exists) {
+        throw new HttpsError("not-found", "Cadastro do instrutor não encontrado.");
+    }
+
+    const instrutorData = instrutorDoc.data();
+    const pixKey = instrutorData.instrutor?.pixKey;
+    const pixKeyType = instrutorData.instrutor?.pixKeyType || "CPF";
+
+    if (!pixKey) {
+        throw new HttpsError("failed-precondition", "O instrutor não cadastrou uma chave PIX para recebimento.");
+    }
+
+    // 4. Buscar comissão da plataforma em configuracoes/precos
+    let comissaoPercent = 20.0;
+    try {
+        const configDoc = await admin.firestore().collection("configuracoes").doc("precos").get();
+        if (configDoc.exists && configDoc.data()?.taxa_comissao != null) {
+            comissaoPercent = Number(configDoc.data().taxa_comissao) || 20.0;
+        }
+    } catch (err) {
+        console.warn("Erro ao buscar configuracoes de comissao:", err);
+    }
+
+    const valorTotal = Number(aula.price?.amount) || 0;
+    if (valorTotal <= 0) {
+        throw new HttpsError("failed-precondition", "Valor da aula inválido para transferência.");
+    }
+
+    // Valor líquido para o instrutor (descontada a comissão da plataforma)
+    const valorRepasse = Number((valorTotal * (1 - (comissaoPercent / 100))).toFixed(2));
+
+    // Mapeia pixKeyType para o padrão Asaas
+    let asaasPixType = "CPF";
+    const typeUpper = (pixKeyType || "").toUpperCase();
+    if (typeUpper.includes("EMAIL")) asaasPixType = "EMAIL";
+    else if (typeUpper.includes("PHONE") || typeUpper.includes("TEL") || typeUpper.includes("CEL")) asaasPixType = "PHONE";
+    else if (typeUpper.includes("EVP") || typeUpper.includes("ALEAT")) asaasPixType = "EVP";
+    else if (typeUpper.includes("CNPJ")) asaasPixType = "CNPJ";
+    else asaasPixType = "CPF";
+
+    let cleanPixKey = pixKey;
+    if (asaasPixType === "CPF" || asaasPixType === "CNPJ" || asaasPixType === "PHONE") {
+        cleanPixKey = pixKey.replace(/\D/g, "");
+    }
+
+    // 5. Executar transferência PIX no Asaas
+    let transferId = `TR_${Date.now()}`;
+    let transferStatus = "DONE";
+
+    try {
+        const transferRes = await fetch(`${ASAAS_BASE_URL}/transfers`, {
+            method: "POST",
+            headers: {
+                "access_token": ASAAS_API_KEY,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                value: valorRepasse,
+                operationType: "PIX",
+                pixAddressKey: cleanPixKey,
+                pixAddressKeyType: asaasPixType,
+                description: `Repasse Instrutor em Casa - Aula ${aulaId.substring(0, 8)}`
+            })
+        });
+
+        const transferJson = await transferRes.json();
+        if (!transferRes.ok) {
+            const errorMsg = transferJson.errors?.[0]?.description || "Erro ao realizar transferência PIX no Asaas.";
+            console.error("Erro Asaas Transfer:", transferJson);
+            throw new HttpsError("internal", errorMsg);
+        }
+
+        transferId = transferJson.id || transferId;
+        transferStatus = transferJson.status || "DONE";
+    } catch (e) {
+        if (e instanceof HttpsError) throw e;
+        console.error("Exceção ao chamar /transfers:", e);
+        throw new HttpsError("internal", `Falha na comunicação com o Asaas: ${e.message || e}`);
+    }
+
+    // 6. Atualizar Aula
+    await aulaRef.update({
+        transferStatus: "transferido",
+        transferId: transferId,
+        transferredAt: admin.firestore.FieldValue.serverTimestamp(),
+        transferAmount: valorRepasse
+    });
+
+    // 7. Criar registro na coleção transferencias
+    const newTransferDoc = admin.firestore().collection("transferencias").doc(transferId);
+    await newTransferDoc.set({
+        id: transferId,
+        aulaId: aulaId,
+        instrutorId: instrutorId,
+        instrutorName: aula.instrutor.name,
+        amount: valorRepasse,
+        totalLessonAmount: valorTotal,
+        date: admin.firestore.FieldValue.serverTimestamp(),
+        pixKey: pixKey,
+        pixKeyType: pixKeyType,
+        status: transferStatus
+    });
+
+    // 8. Atualizar coleção ganhos/{instrutorId}/meses/{YYYY_MM}
+    const now = new Date();
+    const monthYear = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const ganhosMesRef = admin.firestore()
+        .collection("ganhos")
+        .doc(instrutorId)
+        .collection("meses")
+        .doc(monthYear);
+
+    await ganhosMesRef.set({
+        total: admin.firestore.FieldValue.increment(valorRepasse),
+        aulasCount: admin.firestore.FieldValue.increment(1),
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    // 9. Notificar Instrutor
+    await notifyUser(
+        instrutorId,
+        "Repasse Realizado!",
+        `O repasse de R$ ${valorRepasse.toFixed(2).replace(".", ",")} foi enviado para sua chave PIX.`,
+        "/aula_details",
+        aulaId
+    );
+
+    return {
+        success: true,
+        transferId: transferId,
+        amount: valorRepasse
+    };
+});
+
+/**
  * Consulta de Veículos Segura via Cloud Functions
  */
 exports.consultVehicleData = onCall(async (request) => {

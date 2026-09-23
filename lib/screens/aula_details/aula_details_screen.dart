@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
@@ -737,6 +738,9 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
     }
 
     if (aula.paymentType == PaymentType.pix) {
+      final hasNativePix = (aula.pixQrCode != null && aula.pixQrCode!.isNotEmpty) ||
+          (aula.pixPayload != null && aula.pixPayload!.isNotEmpty);
+
       await showDialog(
         context: context,
         builder: (context) => Dialog(
@@ -754,31 +758,69 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 12),
+                Text(
+                  hasNativePix
+                      ? "Escaneie o QR Code abaixo no app do seu banco ou copie o código Pix Copia e Cola:"
+                      : "Escaneie o QR Code abaixo ou abra a fatura completa no navegador para pagar:",
+                  style: const TextStyle(fontSize: 13),
+                ),
                 const SizedBox(height: 16),
-                const Text("Escaneie o QR Code ou use o link abaixo para pagar:"),
-                const SizedBox(height: 20),
                 Center(
-                  child: SizedBox(
-                    width: 200,
-                    height: 200,
-                    child: QrImageView(
-                      data: aula.invoiceUrl!,
-                      version: QrVersions.auto,
-                      size: 200.0,
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
                     ),
+                    child: (aula.pixQrCode != null && aula.pixQrCode!.isNotEmpty)
+                        ? Image.memory(
+                            base64Decode(aula.pixQrCode!),
+                            width: 200,
+                            height: 200,
+                          )
+                        : ((aula.pixPayload != null && aula.pixPayload!.isNotEmpty)
+                            ? QrImageView(
+                                data: aula.pixPayload!,
+                                version: QrVersions.auto,
+                                size: 200.0,
+                              )
+                            : (aula.invoiceUrl != null
+                                ? QrImageView(
+                                    data: aula.invoiceUrl!,
+                                    version: QrVersions.auto,
+                                    size: 200.0,
+                                  )
+                                : const SizedBox(
+                                    width: 200,
+                                    height: 200,
+                                    child: Center(child: Text("Sem QR Code")),
+                                  ))),
                   ),
                 ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: aula.invoiceUrl!));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Link copiado!")),
-                    );
-                  },
-                  child: const Text("Copiar Link de Pagamento"),
-                ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+                if (aula.pixPayload != null && aula.pixPayload!.isNotEmpty) ...[
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: aula.pixPayload!));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Código Pix Copia e Cola copiado!")),
+                      );
+                    },
+                    icon: const Icon(Icons.copy, size: 18),
+                    label: const Text("Copiar Pix Copia e Cola"),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (aula.invoiceUrl != null && aula.invoiceUrl!.isNotEmpty) ...[
+                  OutlinedButton.icon(
+                    onPressed: () => launchUrl(Uri.parse(aula.invoiceUrl!)),
+                    icon: const Icon(Icons.open_in_browser, size: 18),
+                    label: const Text("Abrir Fatura no Navegador"),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text("Fechar"),
@@ -862,12 +904,16 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
       final String paymentId = payment['paymentId'] ?? '';
       final String invoiceUrl = payment['invoiceUrl'] ?? '';
       final String paymentStatus = payment['paymentStatus'] ?? 'PENDING';
+      final String? pixQrCode = payment['pixQrCode'];
+      final String? pixPayload = payment['pixPayload'];
 
       await FirebaseFirestore.instance.collection("aulas").doc(aula.id).update({
         'paymentId': paymentId,
         'invoiceUrl': invoiceUrl,
         'paymentType': newType.name,
         'paymentStatus': paymentStatus,
+        'pixQrCode': pixQrCode,
+        'pixPayload': pixPayload,
       });
 
       Navigator.pop(context); // Close loading
@@ -890,6 +936,8 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
         paymentId: paymentId,
         invoiceUrl: invoiceUrl,
         paymentStatus: paymentStatus,
+        pixQrCode: pixQrCode,
+        pixPayload: pixPayload,
       );
 
       await _payNow(updatedAula);

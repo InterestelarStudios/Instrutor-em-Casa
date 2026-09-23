@@ -74,7 +74,12 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        _buildDocumentTile(context, "LADV", aluno?.ladv, DocumentType.ladv),
+        _buildDocumentTile(
+          context,
+          "Certidão da Prova Teórica (Legislação)",
+          aluno?.certidaoTeorica ?? aluno?.ladv,
+          DocumentType.certidaoTeorica,
+        ),
         _buildDocumentTile(context, "CNH", aluno?.cnh, DocumentType.cnh),
         if (aluno == null)
           const Padding(
@@ -196,8 +201,13 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           updateData["instrutor.$field.type"] = type.name;
         } else {
           String field = type.name;
+          // A certidão da prova teórica não passa por verificação manual e já sobe como aprovada
+          final status = (type == DocumentType.certidaoTeorica)
+              ? DocumentStatus.approved
+              : DocumentStatus.sended;
+
           updateData["aluno.$field.url"] = url;
-          updateData["aluno.$field.status"] = DocumentStatus.sended.name;
+          updateData["aluno.$field.status"] = status.name;
           updateData["aluno.$field.type"] = type.name;
         }
 
@@ -205,8 +215,11 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
         
         // ignore: use_build_context_synchronously
         Navigator.pop(context);
+        final String successMessage = (type == DocumentType.certidaoTeorica)
+            ? "Certidão teórica anexada e aprovada com sucesso! Você já pode agendar suas aulas."
+            : "Documento enviado com sucesso! Aguarde a aprovação.";
         // ignore: use_build_context_synchronously
-        DialogServices().alertDialog(context, "Documento enviado com sucesso! Aguarde a aprovação.", title: "Sucesso");
+        DialogServices().alertDialog(context, successMessage, title: "Sucesso");
       } catch (e) {
         // ignore: use_build_context_synchronously
         Navigator.pop(context);

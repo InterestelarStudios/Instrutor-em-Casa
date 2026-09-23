@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:instrutor_em_casa/models/aula.dart';
 import 'package:instrutor_em_casa/models/instrutor.dart';
+import 'package:instrutor_em_casa/models/precos_config.dart';
 import 'package:instrutor_em_casa/models/usuario.dart';
+import 'package:instrutor_em_casa/services/precos_service.dart';
 import 'package:instrutor_em_casa/screens/agendar_aula/steps/step1/agendar_aula_1.dart';
 import 'package:instrutor_em_casa/screens/agendar_aula/steps/step2/agendar_aula_2.dart';
 import 'package:instrutor_em_casa/screens/agendar_aula/steps/step3/agendar_aula_3.dart';
@@ -18,7 +20,11 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AgendarAulaScreen extends StatefulWidget {
-  const AgendarAulaScreen({super.key, required this.usuario, required this.myUser,});
+  const AgendarAulaScreen({
+    super.key,
+    required this.usuario,
+    required this.myUser,
+  });
   final Usuario usuario;
   final Usuario myUser;
 
@@ -40,9 +46,10 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
   bool success = false;
   bool processingPayment = false;
   bool acceptedTerms = false;
+  PrecosConfig precosConfig = const PrecosConfig();
 
   void getPosition() {
-    Geolocator.getCurrentPosition().then((value){
+    Geolocator.getCurrentPosition().then((value) {
       setState(() {
         position = value;
       });
@@ -53,37 +60,34 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
   void initState() {
     super.initState();
     getPosition();
+    _loadPrecos();
   }
-  
-  LessonPrice price(){
-    final price = LessonPrice(
-      amount: 0,
-      hourPrice: 0,
-      distance: 0,
-    );
 
-    if(hours != null && category != null){
-      // Categoria A = 90/h, Outras (B, C, etc) = 120/h
-      double rate = category == CNHCategory.A ? 90.0 : 120.0;
-      price.hourPrice = (hours ?? 0) * rate;
-      price.amount = price.hourPrice;
+  Future<void> _loadPrecos() async {
+    final config = await PrecosService.getPrecos();
+    if (mounted) {
+      setState(() {
+        precosConfig = config;
+      });
     }
+  }
 
-    if(lessonVehicle != null){
-      if(lessonVehicle == LessonVehicle.instrutor){
-        // Taxa fixa de deslocamento: R$ 20,00
-        price.distance = 20.0;
-        price.amount = price.amount + price.distance;
-      }
+  LessonPrice price() {
+    final price = LessonPrice(amount: 0, hourPrice: 0, distance: 0);
+
+    if (hours != null && category != null) {
+      double rate = precosConfig.getPriceForCategory(category!);
+      price.hourPrice = (hours ?? 0) * rate;
+      price.distance = precosConfig.taxaDeslocamento;
+      price.amount = price.hourPrice + price.distance;
     }
     return price;
   }
 
   @override
   Widget build(BuildContext context) {
-
-    bool didPop(){
-      if(success){
+    bool didPop() {
+      if (success) {
         return true;
       } else {
         return page <= 0;
@@ -93,14 +97,15 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
     return PopScope(
       canPop: didPop(),
       onPopInvokedWithResult: (didPop, result) {
-        if(page > 0){
-          pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.ease,);
+        if (page > 0) {
+          pageController.previousPage(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.ease,
+          );
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          
-        ),
+        appBar: AppBar(),
         body: Column(
           children: [
             Container(
@@ -114,106 +119,205 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
               child: PageView(
                 controller: pageController,
                 physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (value){
+                onPageChanged: (value) {
                   setState(() {
                     page = value;
                   });
                 },
                 children: [
                   AgendarAula1(
-                    onChangedLessonCategory: (value)=> setState(()=> category = value),
-                    onChangedLessonTime: (value)=> setState(()=> hours = value),
-                    onChangedLessonType: (value)=> setState(()=> lessonType = value),
-                    onChangedLessonVehicle: (value)=> setState(()=> lessonVehicle = value),
-                    onChangedHoursPerSession: (value)=> setState(()=> hoursPerSession = value),
-                    instrutorCategories: widget.usuario.instrutor?.categories ?? [],
+                    onChangedLessonCategory: (value) =>
+                        setState(() => category = value),
+                    onChangedLessonTime: (value) =>
+                        setState(() => hours = value),
+                    onChangedLessonType: (value) =>
+                        setState(() => lessonType = value),
+                    onChangedLessonVehicle: (value) =>
+                        setState(() => lessonVehicle = value),
+                    onChangedHoursPerSession: (value) =>
+                        setState(() => hoursPerSession = value),
+                    instrutorCategories:
+                        widget.usuario.instrutor?.categories ?? [],
                     usuario: widget.myUser,
                     defaultVehicle: widget.usuario.instrutor?.defaultVehicle,
+                    precosConfig: precosConfig,
                   ),
                   AgendarAula2(
                     hours: hours ?? 1,
                     hoursPerSession: hoursPerSession,
-                    onChangedSessions: (value)=> setState(()=> sessions = value),
+                    onChangedSessions: (value) =>
+                        setState(() => sessions = value),
                     alunoId: widget.myUser.id,
                     instrutorId: widget.usuario.id,
                   ),
                   AgendarAula3(
-                    onChangedPayment: (value)=> setState(()=> paymentType = value),
-                    onChangedTerms: (value)=> setState(()=> acceptedTerms = value),
-                    resumeWidget: page < 2 ? const SizedBox():
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            resumeRow(title: "Instrutor", value: widget.usuario.name),
-                            resumeRow(title: "Tipo de aula", value: lessonTypeTranslate(lessonType!)),
-                            resumeRow(title: "Veículo", value: lessonVehicleTranslate(lessonVehicle!)),
-                            if (lessonVehicle == LessonVehicle.instrutor && widget.usuario.instrutor?.defaultVehicle != null) ...[
-                              Padding(
-                                padding: const EdgeInsets.only(left: 12, bottom: 8),
-                                child: Text(
-                                  "(${widget.usuario.instrutor!.defaultVehicle!.brand} ${widget.usuario.instrutor!.defaultVehicle!.model} - ${widget.usuario.instrutor!.defaultVehicle!.color})",
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-                                ),
-                              ),
-                            ],
-                            resumeRow(title: "Total de Horas", value: "$hours h"),
-                            const SizedBox(height: 10),
-                            const Divider(),
-                            const SizedBox(height: 10),
-                            Text("Cronograma de Aulas:", style: Theme.of(context).textTheme.titleSmall),
-                            const SizedBox(height: 10),
-                            ...sessions.map((s) => Padding(
-                              padding: const EdgeInsets.only(bottom: 5),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    onChangedPayment: (value) =>
+                        setState(() => paymentType = value),
+                    onChangedTerms: (value) =>
+                        setState(() => acceptedTerms = value),
+                    resumeWidget: page < 2
+                        ? const SizedBox()
+                        : Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  Text(
-                                    "${DateFormat('dd/MM').format(s.date.toDate())} às ${DateFormat('HH:mm').format(s.date.toDate())}",
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                  resumeRow(
+                                    title: "Instrutor",
+                                    value: widget.usuario.name,
                                   ),
-                                  Text("${s.duration}h", style: Theme.of(context).textTheme.bodySmall),
+                                  resumeRow(
+                                    title: "Tipo de aula",
+                                    value: lessonTypeTranslate(lessonType!),
+                                  ),
+                                  resumeRow(
+                                    title: "Veículo",
+                                    value: lessonVehicleTranslate(
+                                      lessonVehicle!,
+                                    ),
+                                  ),
+                                  if (lessonVehicle ==
+                                          LessonVehicle.instrutor &&
+                                      widget
+                                              .usuario
+                                              .instrutor
+                                              ?.defaultVehicle !=
+                                          null) ...[
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        left: 12,
+                                        bottom: 8,
+                                      ),
+                                      child: Text(
+                                        "(${widget.usuario.instrutor!.defaultVehicle!.brand} ${widget.usuario.instrutor!.defaultVehicle!.model} - ${widget.usuario.instrutor!.defaultVehicle!.color})",
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: AppColors.textMuted,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                  resumeRow(
+                                    title: "Total de Horas",
+                                    value: "$hours h",
+                                  ),
+                                  const SizedBox(height: 10),
+                                  const Divider(),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    "Cronograma de Aulas:",
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  ...sessions.map(
+                                    (s) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 5),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            "${DateFormat('dd/MM').format(s.date.toDate())} às ${DateFormat('HH:mm').format(s.date.toDate())}",
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.bodySmall,
+                                          ),
+                                          Text(
+                                            "${s.duration}h",
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.bodySmall,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  const Divider(),
+                                  const SizedBox(height: 6),
+                                  resumeRow(
+                                    title: "Subtotal Aulas ($hours h)",
+                                    value: NumberFormat.currency(
+                                      symbol: "R\$",
+                                      locale: "pt_BR",
+                                    ).format(price().hourPrice),
+                                  ),
+                                  resumeRow(
+                                    title: "Taxa de Deslocamento",
+                                    value: NumberFormat.currency(
+                                      symbol: "R\$",
+                                      locale: "pt_BR",
+                                    ).format(price().distance),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  const Divider(),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "Total",
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                      Text(
+                                        NumberFormat.currency(
+                                          symbol: "R\$",
+                                          locale: "pt_BR",
+                                        ).format(price().amount),
+                                        textAlign: TextAlign.right,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleLarge?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
-                            )),
-                            const SizedBox(height: 10),
-                            const Divider(),
-                            const SizedBox(height: 10),
-                            Text(
-                              NumberFormat.currency(symbol: "R\$", locale: "pt_BR").format(price().amount),
-                              textAlign: TextAlign.right,
-                              style: Theme.of(context).textTheme.titleLarge,
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
+                          ),
                   ),
                 ],
               ),
             ),
           ],
         ),
-        bottomNavigationBar: !next() ? null :
-        Container(
-          height: 50,
-          margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          child: ElevatedButton(
-            onPressed: processingPayment ? null : () async {
-              if(page < 2){
-                pageController.nextPage(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.ease,
-                );
-              } else {
-                _showContractPointsDialog();
-              }
-            },
-            child: processingPayment ? const CircularProgressIndicator() : Text(page < 2 ? "Próximo" : "Confirmar e Pagar")
-          ),
-        ),
+        bottomNavigationBar: !next()
+            ? null
+            : Container(
+                height: 50,
+                margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: ElevatedButton(
+                  onPressed: processingPayment
+                      ? null
+                      : () async {
+                          if (page < 2) {
+                            pageController.nextPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.ease,
+                            );
+                          } else {
+                            _showContractPointsDialog();
+                          }
+                        },
+                  child: processingPayment
+                      ? const CircularProgressIndicator()
+                      : Text(page < 2 ? "Próximo" : "Confirmar e Pagar"),
+                ),
+              ),
       ),
     );
   }
@@ -228,18 +332,33 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Ao prosseguir, você confirma que está ciente dos seguintes pontos:"),
+              const Text(
+                "Ao prosseguir, você confirma que está ciente dos seguintes pontos:",
+              ),
               const SizedBox(height: 15),
-              _pointItem("Intermediação: A plataforma apenas conecta você a instrutores autônomos."),
-              _pointItem("Pagamentos: Devem ser feitos exclusivamente pelo app. Proibido pagar direto ao instrutor."),
-              _pointItem("Cancelamento: Reembolso parcial ou retenção dependendo da antecedência."),
-              _pointItem("Tolerância: Atrasos de no máximo 5 minutos por sessão."),
-              _pointItem("Documentação: Você deve portar sua LADV ou CNH física durante as aulas."),
+              _pointItem(
+                "Intermediação: A plataforma apenas conecta você a instrutores autônomos.",
+              ),
+              _pointItem(
+                "Pagamentos: Devem ser feitos exclusivamente pelo app. Proibido pagar direto ao instrutor.",
+              ),
+              _pointItem(
+                "Cancelamento: Reembolso parcial ou retenção dependendo da antecedência.",
+              ),
+              _pointItem(
+                "Tolerância: Atrasos de no máximo 5 minutos por sessão.",
+              ),
+              _pointItem(
+                "Documentação: Você deve portar sua Certidão Teórica ou CNH física durante as aulas.",
+              ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Revisar")),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Revisar"),
+          ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
@@ -318,6 +437,8 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
       aula.paymentId = paymentId;
       aula.invoiceUrl = invoiceUrl;
       aula.paymentStatus = paymentStatus;
+      aula.pixQrCode = pixQrCode;
+      aula.pixPayload = pixPayload;
 
       // 3. Salvar Aula no Firestore
       await firestore.set(aula.toMap());
@@ -347,7 +468,8 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
         DialogServices.paymentAlert(
           navigator.context,
           success: true,
-          message: "Proposta enviada, fique atento para a resposta do instrutor!",
+          message:
+              "Proposta enviada, fique atento para a resposta do instrutor!",
         );
       }
     } catch (e) {
@@ -377,9 +499,9 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
             children: [
               Text(
                 "Pagamento PIX",
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               const Text(
@@ -402,22 +524,22 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
                           height: 200,
                         )
                       : (pixPayload != null
-                          ? QrImageView(
-                              data: pixPayload,
-                              version: QrVersions.auto,
-                              size: 200.0,
-                            )
-                          : (invoiceUrl != null
-                              ? QrImageView(
-                                  data: invoiceUrl,
-                                  version: QrVersions.auto,
-                                  size: 200.0,
-                                )
-                              : const SizedBox(
-                                  width: 200,
-                                  height: 200,
-                                  child: Center(child: Text("Sem QR Code")),
-                                ))),
+                            ? QrImageView(
+                                data: pixPayload,
+                                version: QrVersions.auto,
+                                size: 200.0,
+                              )
+                            : (invoiceUrl != null
+                                  ? QrImageView(
+                                      data: invoiceUrl,
+                                      version: QrVersions.auto,
+                                      size: 200.0,
+                                    )
+                                  : const SizedBox(
+                                      width: 200,
+                                      height: 200,
+                                      child: Center(child: Text("Sem QR Code")),
+                                    ))),
                 ),
               ),
               const SizedBox(height: 16),
@@ -426,7 +548,9 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: pixPayload));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Código Pix Copia e Cola copiado!")),
+                      const SnackBar(
+                        content: Text("Código Pix Copia e Cola copiado!"),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.copy, size: 18),
@@ -453,21 +577,25 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
     );
   }
 
-  bool next(){
-    if(page == 0){
-      if(category != null && hours != null && lessonType != null && lessonVehicle != null){
+  bool next() {
+    if (page == 0) {
+      if (category != null &&
+          hours != null &&
+          lessonType != null &&
+          lessonVehicle != null) {
         return true;
       } else {
         return false;
       }
-    } else if(page == 1){
-      if(sessions.isNotEmpty && sessions.every((s) => s.date.toDate().year > 2000)){
+    } else if (page == 1) {
+      if (sessions.isNotEmpty &&
+          sessions.every((s) => s.date.toDate().year > 2000)) {
         return true;
       } else {
         return false;
       }
-    } else if(page == 2){
-      if(paymentType != null && acceptedTerms){
+    } else if (page == 2) {
+      if (paymentType != null && acceptedTerms) {
         return true;
       } else {
         return false;
@@ -477,14 +605,14 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
     }
   }
 
-  Widget resumeRow({required String title, required String value}){
+  Widget resumeRow({required String title, required String value}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title, style: Theme.of(context).textTheme.bodySmall),
-          Text(value, style: Theme.of(context).textTheme.titleMedium)
+          Text(value, style: Theme.of(context).textTheme.titleMedium),
         ],
       ),
     );

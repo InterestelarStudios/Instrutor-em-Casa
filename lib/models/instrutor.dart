@@ -79,7 +79,7 @@ class InstrutorData {
   factory InstrutorData.fromJson(String source) => InstrutorData.fromMap(json.decode(source) as Map<String, dynamic>);
 }
 
-enum DocumentType {id, cnh, credencial, lav, crlv, face, ladv}
+enum DocumentType {id, cnh, credencial, lav, crlv, face, ladv, certidaoTeorica}
 enum DocumentStatus {approved, refused, expired, sended}
 
 class UserDocument {
@@ -107,8 +107,16 @@ class UserDocument {
 
   factory UserDocument.fromMap(Map<String, dynamic> map) {
     return UserDocument(
-      type: DocumentType.values.where((e)=> e.name == map['type']).first,
-      status: DocumentStatus.values.where((e)=> e.name == map['status']).first,
+      type: DocumentType.values.cast<DocumentType?>().firstWhere(
+            (e) => e?.name == map['type'],
+            orElse: () => DocumentType.certidaoTeorica,
+          ) ??
+          DocumentType.certidaoTeorica,
+      status: DocumentStatus.values.cast<DocumentStatus?>().firstWhere(
+            (e) => e?.name == map['status'],
+            orElse: () => DocumentStatus.sended,
+          ) ??
+          DocumentStatus.sended,
       url: map['url'] as String,
       message: map['message'] != null ? map['message'] as String : null,
     );

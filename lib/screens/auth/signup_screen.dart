@@ -9,7 +9,11 @@ import 'package:instrutor_em_casa/widgets/dialog_services.dart';
 import 'package:ionicons/ionicons.dart';
 
 class SignupScreen extends StatefulWidget {
-  const SignupScreen({super.key, required this.onChangedState, required this.onGetUser});
+  const SignupScreen({
+    super.key,
+    required this.onChangedState,
+    required this.onGetUser,
+  });
   final ValueChanged onChangedState;
   final ValueChanged<User> onGetUser;
 
@@ -39,17 +43,17 @@ class _SignupScreenState extends State<SignupScreen> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              const SizedBox(height: 40,),
+              const SizedBox(height: 40),
               Text(
                 "Criar conta",
                 style: Theme.of(context).textTheme.displayLarge,
               ),
-              const SizedBox(height: 20,),
+              const SizedBox(height: 20),
               Text(
-                "Crie sua conta para começar suas aulas ou se tornar instrutor.",
+                "Crie sua conta para começar suas atividades no Instrutor em Casa Brasil.",
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
-              const SizedBox(height: 40,),
+              const SizedBox(height: 40),
               TextFormField(
                 enabled: !loading,
                 controller: controllerName,
@@ -58,39 +62,38 @@ class _SignupScreenState extends State<SignupScreen> {
                   prefixIcon: Icon(Ionicons.person_outline),
                 ),
                 textCapitalization: TextCapitalization.words,
-                inputFormatters: [
-                  LengthLimitingTextInputFormatter(60)
-                ],
+                inputFormatters: [LengthLimitingTextInputFormatter(60)],
                 keyboardType: TextInputType.name,
-                validator: (text){
+                validator: (text) {
                   return text!.length < 10 ? "Nome muito curto" : null;
                 },
               ),
-              const SizedBox(height: 10,),
+              const SizedBox(height: 10),
               DropdownButtonFormField<UserGenre>(
-                items: UserGenre.values.map(
-                  (e){
-                    final genre = e.name[0].toUpperCase() + e.name.substring(1).toLowerCase();
-                    return DropdownMenuItem<UserGenre>(
-                      value: e,
-                      child: Text(genre)
-                    );
-                  }
-                ).toList(),
-                onChanged: (value){
+                items: UserGenre.values.map((e) {
+                  final genre =
+                      e.name[0].toUpperCase() +
+                      e.name.substring(1).toLowerCase();
+                  return DropdownMenuItem<UserGenre>(
+                    value: e,
+                    child: Text(genre),
+                  );
+                }).toList(),
+                onChanged: (value) {
                   setState(() {
                     genre = value;
                   });
                 },
                 decoration: InputDecoration(
                   prefixIcon: Icon(Ionicons.male_female_outline),
-                  labelText: "Gênero"
+                  labelText: "Gênero",
                 ),
-                validator: (value)=> genre == null ? "Selecione seu gênero" : null,
+                validator: (value) =>
+                    genre == null ? "Selecione seu gênero" : null,
                 isExpanded: true,
                 borderRadius: BorderRadius.circular(20),
               ),
-              const SizedBox(height: 10,),
+              const SizedBox(height: 10),
               TextFormField(
                 enabled: !loading,
                 controller: controllerBirth,
@@ -103,9 +106,9 @@ class _SignupScreenState extends State<SignupScreen> {
                   DataInputFormatter(),
                 ],
                 keyboardType: TextInputType.number,
-                validator: (text)=> validateBirthDate(text),
+                validator: (text) => validateBirthDate(text),
               ),
-              const SizedBox(height: 10,),
+              const SizedBox(height: 10),
               TextFormField(
                 enabled: !loading,
                 controller: controllerCEP,
@@ -118,11 +121,11 @@ class _SignupScreenState extends State<SignupScreen> {
                   CepInputFormatter(),
                 ],
                 keyboardType: TextInputType.number,
-                validator: (text){
+                validator: (text) {
                   return text!.length < 10 ? "CEP inválido" : null;
                 },
               ),
-              const SizedBox(height: 10,),
+              const SizedBox(height: 10),
               TextFormField(
                 enabled: !loading,
                 controller: controllerCPF,
@@ -135,9 +138,9 @@ class _SignupScreenState extends State<SignupScreen> {
                   CpfInputFormatter(),
                 ],
                 keyboardType: TextInputType.number,
-                validator: (text)=> validateCPF(text),
+                validator: (text) => validateCPF(text),
               ),
-              const SizedBox(height: 10,),
+              const SizedBox(height: 10),
               TextFormField(
                 enabled: !loading,
                 controller: controllerPhone,
@@ -150,11 +153,11 @@ class _SignupScreenState extends State<SignupScreen> {
                   TelefoneInputFormatter(),
                 ],
                 keyboardType: TextInputType.number,
-                validator: (text){
+                validator: (text) {
                   return text!.length < 15 ? "Telefone inválido" : null;
                 },
               ),
-              const SizedBox(height: 10,),
+              const SizedBox(height: 10),
               TextFormField(
                 enabled: !loading,
                 controller: controllerEmail,
@@ -162,15 +165,15 @@ class _SignupScreenState extends State<SignupScreen> {
                   labelText: "E-mail",
                   prefixIcon: Icon(Ionicons.mail_outline),
                 ),
-                inputFormatters: [
-                  LengthLimitingTextInputFormatter(60)
-                ],
+                inputFormatters: [LengthLimitingTextInputFormatter(60)],
                 keyboardType: TextInputType.emailAddress,
-                validator: (text){
-                  return !text!.contains("@") && !text.contains(".") ? "E-mail inválido" : null;
+                validator: (text) {
+                  return !text!.contains("@") && !text.contains(".")
+                      ? "E-mail inválido"
+                      : null;
                 },
               ),
-              const SizedBox(height: 10,),
+              const SizedBox(height: 10),
               TextFormField(
                 enabled: !loading,
                 controller: controllerPass,
@@ -179,17 +182,19 @@ class _SignupScreenState extends State<SignupScreen> {
                   labelText: "Senha",
                   prefixIcon: Icon(Ionicons.key_outline),
                   suffixIcon: IconButton(
-                    onPressed: ()=> setState(
-                      ()=> obscurePass = !obscurePass
+                    onPressed: () => setState(() => obscurePass = !obscurePass),
+                    icon: Icon(
+                      obscurePass
+                          ? Ionicons.eye_outline
+                          : Ionicons.eye_off_outline,
                     ),
-                    icon: Icon(obscurePass ? Ionicons.eye_outline : Ionicons.eye_off_outline)
                   ),
                 ),
-                inputFormatters: [
-                  LengthLimitingTextInputFormatter(60)
-                ],
-                validator: (text){
-                  return text!.length < 6 ? "A senha deve ter no mínimo 6 dígitos" : null;
+                inputFormatters: [LengthLimitingTextInputFormatter(60)],
+                validator: (text) {
+                  return text!.length < 6
+                      ? "A senha deve ter no mínimo 6 dígitos"
+                      : null;
                 },
               ),
             ],
@@ -204,43 +209,72 @@ class _SignupScreenState extends State<SignupScreen> {
               SizedBox(
                 height: 50,
                 child: FilledButton(
-                  onPressed: loading ? null : (){
-                    FocusScope.of(context).unfocus();
-                    if(formKey.currentState!.validate()){
-                      setState(() {
-                        loading = !loading;
-                      });
-                      final birthParts = controllerBirth.text.split("/");
-                      final usuario = Usuario(
-                        id: "",
-                        name: controllerName.text.trim(),
-                        data: UserData(
-                          birth: Timestamp.fromDate(DateTime(int.parse(birthParts.last), int.parse(birthParts[1]), int.parse(birthParts.first))),
-                          cpf: controllerCPF.text.replaceAll(RegExp(r'[^0-9]'), ''),
-                          phone: controllerPhone.text.replaceAll(RegExp(r'[^0-9]'), ''),
-                          postalCode: controllerCEP.text.replaceAll(RegExp(r'[^0-9]'), ''),
-                          genre: genre!,
-                        ),
-                        created: Timestamp.now(),
-                        email: controllerEmail.text.trim(),
-                      );
-                      FirebaseAuth.instance.createUserWithEmailAndPassword(
-                        email: usuario.email,
-                        password: controllerPass.text,
-                      ).then((onValue) async {
-                        final userid = onValue.user!.uid;
-                        usuario.id = userid;
-                        await FirebaseFirestore.instance.collection("users").doc(userid).set(usuario.toMap());
-                        widget.onGetUser.call(onValue.user!);
-                      }).catchError((e){
-                        setState(() {
-                          loading = false;
-                          DialogServices.paymentAlert(context, success: false, message: authErrors(e));
-                        });
-                      });
-                    }
-                  },
-                  child: loading ? CircularProgressIndicator() : Text("Criar conta")
+                  onPressed: loading
+                      ? null
+                      : () {
+                          FocusScope.of(context).unfocus();
+                          if (formKey.currentState!.validate()) {
+                            setState(() {
+                              loading = !loading;
+                            });
+                            final birthParts = controllerBirth.text.split("/");
+                            final usuario = Usuario(
+                              id: "",
+                              name: controllerName.text.trim(),
+                              data: UserData(
+                                birth: Timestamp.fromDate(
+                                  DateTime(
+                                    int.parse(birthParts.last),
+                                    int.parse(birthParts[1]),
+                                    int.parse(birthParts.first),
+                                  ),
+                                ),
+                                cpf: controllerCPF.text.replaceAll(
+                                  RegExp(r'[^0-9]'),
+                                  '',
+                                ),
+                                phone: controllerPhone.text.replaceAll(
+                                  RegExp(r'[^0-9]'),
+                                  '',
+                                ),
+                                postalCode: controllerCEP.text.replaceAll(
+                                  RegExp(r'[^0-9]'),
+                                  '',
+                                ),
+                                genre: genre!,
+                              ),
+                              created: Timestamp.now(),
+                              email: controllerEmail.text.trim(),
+                            );
+                            FirebaseAuth.instance
+                                .createUserWithEmailAndPassword(
+                                  email: usuario.email,
+                                  password: controllerPass.text,
+                                )
+                                .then((onValue) async {
+                                  final userid = onValue.user!.uid;
+                                  usuario.id = userid;
+                                  await FirebaseFirestore.instance
+                                      .collection("users")
+                                      .doc(userid)
+                                      .set(usuario.toMap());
+                                  widget.onGetUser.call(onValue.user!);
+                                })
+                                .catchError((e) {
+                                  setState(() {
+                                    loading = false;
+                                    DialogServices.paymentAlert(
+                                      context,
+                                      success: false,
+                                      message: authErrors(e),
+                                    );
+                                  });
+                                });
+                          }
+                        },
+                  child: loading
+                      ? CircularProgressIndicator()
+                      : Text("Criar conta"),
                 ),
               ),
               Row(
@@ -248,14 +282,16 @@ class _SignupScreenState extends State<SignupScreen> {
                 children: [
                   Text("Já possui conta?"),
                   TextButton(
-                    onPressed: loading ? null : ()=> widget.onChangedState.call(null),
+                    onPressed: loading
+                        ? null
+                        : () => widget.onChangedState.call(null),
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.only()
+                      padding: const EdgeInsets.only(),
                     ),
-                    child: Text("Login")
+                    child: Text("Login"),
                   ),
                 ],
-              )
+              ),
             ],
           ),
         ),
@@ -288,15 +324,15 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  String? validateBirthDate(String? text){
-    if(text == null || text.length < 10){
+  String? validateBirthDate(String? text) {
+    if (text == null || text.length < 10) {
       return "Data inválida";
     }
 
     try {
       final parts = text.split("/");
       final birthYear = int.parse(parts.last);
-      if(Timestamp.now().toDate().year - birthYear < 18){
+      if (Timestamp.now().toDate().year - birthYear < 18) {
         return "Você precisa ter 18 anos para se cadastrar.";
       }
     } catch (e) {

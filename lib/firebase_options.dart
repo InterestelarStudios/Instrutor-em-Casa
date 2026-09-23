@@ -50,8 +50,8 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBVdNY5IJwBEvBomVmukF9m336mFBdf3L8',
-    appId: '1:1021567319412:android:7cae7ad2585448d1a88021',
+    apiKey: 'AIzaSyD1IczoVazUWXqOhtNYsDy1kXwSnSlDGAM',
+    appId: '1:1021567319412:android:4015bc6b2fd16184a88021',
     messagingSenderId: '1021567319412',
     projectId: 'instrutor-em-casa',
     storageBucket: 'instrutor-em-casa.firebasestorage.app',
@@ -65,4 +65,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'instrutor-em-casa.firebasestorage.app',
     iosBundleId: 'com.example.instrutorEmCasa',
   );
+
 }
