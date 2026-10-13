@@ -9,10 +9,13 @@ admin.initializeApp();
 // Configura a região global para southamerica-east1 (São Paulo) para melhor performance no Brasil
 setGlobalOptions({ region: "southamerica-east1" });
 
+const { GoogleGenAI } = require("@google/genai");
+
 // Chaves e configurações de backend seguras (obtidas via variáveis de ambiente / .env)
 const ASAAS_API_KEY = process.env.ASAAS_API_KEY || "";
 const ASAAS_BASE_URL = process.env.ASAAS_BASE_URL || "https://api.asaas.com/v3";
 const INFOSIMPLES_TOKEN = process.env.INFOSIMPLES_TOKEN || "";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
 /**
  * Função auxiliar para enviar notificação para um usuário e salvar no histórico.
@@ -650,80 +653,220 @@ exports.consultVehicleData = onCall(async (request) => {
     const { plate, renavam, uf } = request.data || {};
     const cleanPlate = (plate || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
     const cleanRenavam = (renavam || "").replace(/\D/g, "");
-    const cleanUf = (uf || "").trim().toLowerCase();
+    const cleanUf = (uf || "am").trim().toLowerCase();
 
-    if (!cleanPlate || !cleanRenavam || !cleanUf) {
-        throw new HttpsError("invalid-argument", "Placa, Renavam e UF são obrigatórios.");
+    if (!cleanPlate || !cleanRenavam) {
+        throw new HttpsError("invalid-argument", "Placa e Renavam são obrigatórios.");
+    }
+
+    if (!INFOSIMPLES_TOKEN) {
+        throw new HttpsError("failed-precondition", "Token da Infosimples não configurado nas variáveis de ambiente.");
     }
 
     try {
-        const url = `https://api.infosimples.com/api/v1/detran/${cleanUf}/veiculos?token=${INFOSIMPLES_TOKEN}&placa=${cleanPlate}&renavam=${cleanRenavam}`;
-        const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
-        if (response.ok) {
-            const decoded = await response.json();
-            if (decoded.code === 200 && decoded.data && decoded.data.length > 0) {
-                const data = decoded.data[0];
-                const marcaModelo = data.marca_modelo || data.modelo || "Veículo/Desconhecido";
-                const parts = marcaModelo.split("/");
-                const brand = parts.length > 0 ? parts[0].trim() : "Desconhecido";
-                const model = parts.length > 1 ? parts.slice(1).join("/").trim() : marcaModelo;
+        const params = new URLSearchParams();
+        params.append("token", INFOSIMPLES_TOKEN);
+        params.append("placa", cleanPlate);
+        params.append("renavam", cleanRenavam);
 
-                return {
-                    id: "",
-                    plate: cleanPlate,
-                    renavam: cleanRenavam,
-                    brand: brand,
-                    model: model,
-                    yearFabrication: parseInt(data.ano_fabricacao) || 2020,
-                    yearModel: parseInt(data.ano_modelo) || 2021,
-                    color: data.cor || "Branco",
-                    fuel: data.combustivel || "Flex",
-                    chassis: data.chassi || "9BWXXXXXXXXXXXXXX",
-                    category: data.categoria || "Particular"
-                };
+        // URL da API Estadual do DETRAN (v2)
+        const url = `https://api.infosimples.com/api/v2/consultas/detran/${cleanUf}/veiculo`;
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: params.toString(),
+            signal: AbortSignal.timeout(25000)
+        });
+
+        const decoded = await response.json();
+
+        if (decoded.code === 200 && Array.isArray(decoded.data) && decoded.data.length > 0) {
+            const data = decoded.data[0];
+
+            let brand = "";
+            let model = "";
+
+            // O DETRAN-AM e vários outros retornam 'marca' como 'FABRICANTE/MODELO' (ex: 'I/LR R.R SPT 3.0', 'FIAT/MOBI LIKE')
+            const rawMarca = data.marca || data.marca_modelo || "";
+            if (rawMarca.includes("/")) {
+                const parts = rawMarca.split("/");
+                brand = parts[0].trim();
+                model = parts.slice(1).join("/").trim();
+            } else if (rawMarca) {
+                brand = rawMarca.trim();
+                model = data.modelo || rawMarca.trim();
             }
+
+            // Tratamento do ano: DETRAN-AM retorna "2019 / 2019" ou campos separados
+            let yearFab = new Date().getFullYear();
+            let yearMod = yearFab;
+
+            if (data.ano_modelo && typeof data.ano_modelo === "string" && data.ano_modelo.includes("/")) {
+                const yearParts = data.ano_modelo.split("/");
+                yearFab = parseInt(yearParts[0].trim()) || yearFab;
+                yearMod = parseInt(yearParts[1].trim()) || yearFab;
+            } else {
+                yearFab = parseInt(data.ano_fabricacao) || parseInt(data.ano_modelo) || yearFab;
+                yearMod = parseInt(data.ano_modelo) || yearFab;
+            }
+
+            const color = data.cor || data.cor_veiculo || "Não informada";
+            const fuel = data.combustivel || data.tipo_combustivel || "Flex";
+            const chassis = data.chassi || data.numero_chassi || "";
+            const category = data.categoria || data.tipo_categoria || "Particular";
+
+            return {
+                id: "",
+                plate: cleanPlate,
+                renavam: cleanRenavam,
+                brand: brand || "Desconhecido",
+                model: model || "Veículo",
+                yearFabrication: yearFab,
+                yearModel: yearMod,
+                color: color,
+                fuel: fuel,
+                chassis: chassis,
+                category: category
+            };
+        }
+
+        // Se a API retornou erro específico da Infosimples
+        const errorDetails = (decoded.errors && decoded.errors.length > 0)
+            ? decoded.errors.join("; ")
+            : (decoded.code_message || "Não foi possível consultar os dados do veículo no Detran.");
+
+        console.error("Infosimples Detran error response:", decoded.code, errorDetails);
+
+        if (decoded.code === 603) {
+            throw new HttpsError("permission-denied", `Infosimples: ${errorDetails}`);
+        } else if (decoded.code === 607 || decoded.code === 600 || decoded.code === 601) {
+            throw new HttpsError("invalid-argument", `Dados inválidos: ${errorDetails}`);
+        } else if (decoded.code === 602) {
+            throw new HttpsError("unimplemented", `A consulta automática para a UF (${cleanUf.toUpperCase()}) não está disponível diretamente no Detran.`);
+        } else {
+            throw new HttpsError("not-found", errorDetails);
         }
     } catch (err) {
-        console.warn("Infosimples API error or timeout, applying fallback:", err);
+        if (err instanceof HttpsError) {
+            throw err;
+        }
+        console.error("Error communicating with Infosimples Detran API:", err);
+        throw new HttpsError("unavailable", `Erro na consulta veicular: ${err.message || err}`);
     }
-
-    // Fallback estruturado para desenvolvimento/homologação
-    let brand = "Chevrolet";
-    let model = "Onix 1.0 Turbo LTZ";
-    let color = "Prata";
-    let category = "Aprendizagem";
-    let fuel = "Flex (Álcool/Gasolina)";
-
-    if (cleanPlate.startsWith("M") || cleanPlate.startsWith("K")) {
-        brand = "Honda";
-        model = "CG 160 Fan";
-        color = "Vermelho";
-        category = "Motocicleta";
-        fuel = "Gasolina";
-    } else if (cleanPlate.startsWith("G") || cleanPlate.startsWith("O")) {
-        brand = "Hyundai";
-        model = "HB20 1.0 Comfort";
-        color = "Preto";
-        category = "Automóvel";
-    } else if (cleanPlate.startsWith("F") || cleanPlate.startsWith("P")) {
-        brand = "Fiat";
-        model = "Mobi 1.0 Like";
-        color = "Branco";
-        category = "Aprendizagem";
-    }
-
-    return {
-        id: "",
-        plate: cleanPlate,
-        renavam: cleanRenavam,
-        brand: brand,
-        model: model,
-        yearFabrication: 2022,
-        yearModel: 2023,
-        color: color,
-        fuel: fuel,
-        chassis: `9BWAB9W4L${cleanRenavam.padEnd(12, "9").substring(0, 10)}`,
-        category: category
-    };
 });
+
+/**
+ * Extração Inteligente de Dados de Documentos Veiculares (CRLV / LADV) com Gemini AI
+ */
+exports.extractVehicleDocumentData = onCall({ timeoutSeconds: 60, memory: "512MiB" }, async (request) => {
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Usuário não autenticado.");
+    }
+
+    const { base64File, mimeType } = request.data || {};
+    if (!base64File) {
+        throw new HttpsError("invalid-argument", "Nenhum arquivo enviado para extração.");
+    }
+
+    const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/jpg", "application/pdf"];
+    const effectiveMime = (mimeType || "image/jpeg").toLowerCase();
+    if (!allowedMimes.includes(effectiveMime)) {
+        throw new HttpsError("invalid-argument", `Tipo de arquivo não suportado: ${effectiveMime}. Envie JPG, PNG ou PDF.`);
+    }
+
+    try {
+        let ai;
+        if (GEMINI_API_KEY) {
+            ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+        } else {
+            // Tenta inicializar com credenciais padrão do ambiente Google Cloud / Vertex AI
+            try {
+                ai = new GoogleGenAI({ vertexAI: true, project: "instrutor-em-casa", location: "southamerica-east1" });
+            } catch (initErr) {
+                console.warn("Vertex AI init warning:", initErr);
+                ai = new GoogleGenAI({});
+            }
+        }
+
+        const prompt = `Você é um assistente especialista em leitura e extração de dados de documentos veiculares brasileiros (como CRLV, CRLV-e digital do SENATRAN/DETRAN, LADV - Licença para Aprendizagem de Direção Veicular, ou comprovante de registro de veículo).
+
+Analise o documento fornecido (imagem ou PDF) e extraia com máxima precisão os dados cadastrais do veículo no seguinte formato JSON:
+{
+  "plate": "Placa do veículo em letras maiúsculas sem traços (ex: ABC1D23 ou ABC1234)",
+  "renavam": "Número do RENAVAM apenas dígitos (ex: 12345678901)",
+  "brand": "Nome da marca/fabricante do veículo (ex: FIAT, CHEVROLET, VOLKSWAGEN, TOYOTA, HYUNDAI, RENAULT, HONDA)",
+  "model": "Nome do modelo do veículo (ex: MOBI LIKE, ONIX PLUS, HB20, KWID, GOL, ARGO)",
+  "yearFabrication": 2022,
+  "yearModel": 2023,
+  "color": "Cor predominante do veículo (ex: BRANCA, PRATA, PRETA, CINZA, VERMELHA)",
+  "fuel": "Tipo de combustível (ex: FLEX, ALCOOL/GASOLINA, GASOLINA, DIESEL, ELETRICO)",
+  "chassis": "Número do chassi do veículo (geralmente 17 caracteres alfanuméricos)",
+  "category": "Categoria do veículo (ex: APRENDIZAGEM, PARTICULAR, ALUGUEL)"
+}
+
+Regras:
+1. Se a marca e o modelo estiverem juntos como 'MARCA/MODELO' (ex: 'FIAT/MOBI LIKE 1.0'), separe a marca ('FIAT') do modelo ('MOBI LIKE 1.0').
+2. Retorne apenas o objeto JSON válido, sem texto explicativo adicional.
+3. Se algum campo específico não for encontrado com certeza, preencha com string vazia "" ou ano atual para números.`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: [
+                {
+                    role: "user",
+                    parts: [
+                        {
+                            inlineData: {
+                                mimeType: effectiveMime,
+                                data: base64File
+                            }
+                        },
+                        {
+                            text: prompt
+                        }
+                    ]
+                }
+            ],
+            config: {
+                responseMimeType: "application/json"
+            }
+        });
+
+        const rawText = response.text || "";
+        console.log("Gemini document extraction raw response:", rawText);
+
+        let parsedData = {};
+        try {
+            parsedData = JSON.parse(rawText);
+        } catch (e) {
+            const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                parsedData = JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error("Não foi possível decodificar os dados retornados pelo modelo.");
+            }
+        }
+
+        const currentYear = new Date().getFullYear();
+        return {
+            plate: (parsedData.plate || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase(),
+            renavam: (parsedData.renavam || "").replace(/\D/g, ""),
+            brand: (parsedData.brand || "").trim().toUpperCase(),
+            model: (parsedData.model || "").trim().toUpperCase(),
+            yearFabrication: parseInt(parsedData.yearFabrication) || currentYear,
+            yearModel: parseInt(parsedData.yearModel) || currentYear,
+            color: (parsedData.color || "").trim().toUpperCase() || "NÃO INFORMADA",
+            fuel: (parsedData.fuel || "").trim().toUpperCase() || "FLEX",
+            chassis: (parsedData.chassis || "").trim().toUpperCase(),
+            category: (parsedData.category || "").trim().toUpperCase() || "APRENDIZAGEM"
+        };
+    } catch (err) {
+        console.error("Erro na extração de documento com Gemini:", err);
+        throw new HttpsError("internal", `Não foi possível extrair os dados do documento: ${err.message || err}`);
+    }
+});
+
 

@@ -11,6 +11,7 @@ class InfosimplesService {
     required String plate,
     required String renavam,
     required String uf,
+    String? cpfCnpj,
   }) async {
     final cleanPlate = plate
         .replaceAll(RegExp(r'[^A-Za-z0-9]'), '')
@@ -18,8 +19,12 @@ class InfosimplesService {
     final cleanRenavam = renavam.replaceAll(RegExp(r'[^0-9]'), '');
     final cleanUf = uf.trim().toLowerCase();
 
-    if (cleanPlate.isEmpty || cleanRenavam.isEmpty || cleanUf.isEmpty) {
-      throw "Placa, Renavam e UF são obrigatórios.";
+    if (cleanPlate.isEmpty || cleanRenavam.isEmpty) {
+      throw "Placa e Renavam são obrigatórios.";
+    }
+
+    if (cleanUf.isEmpty) {
+      throw "Selecione o estado (UF) do veículo.";
     }
 
     try {

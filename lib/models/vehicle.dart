@@ -13,6 +13,7 @@ class Vehicle {
   String fuel;
   String chassis;
   String category;
+  String? documentUrl;
 
   Vehicle({
     required this.id,
@@ -26,6 +27,7 @@ class Vehicle {
     required this.fuel,
     required this.chassis,
     required this.category,
+    this.documentUrl,
   });
 
   Map<String, dynamic> toMap() {
@@ -41,22 +43,24 @@ class Vehicle {
       'fuel': fuel,
       'chassis': chassis,
       'category': category,
+      if (documentUrl != null) 'documentUrl': documentUrl,
     };
   }
 
   factory Vehicle.fromMap(Map<String, dynamic> map) {
     return Vehicle(
-      id: map['id'] as String,
-      plate: map['plate'] as String,
-      renavam: map['renavam'] as String,
-      brand: map['brand'] as String,
-      model: map['model'] as String,
-      yearFabrication: map['yearFabrication'] as int,
-      yearModel: map['yearModel'] as int,
-      color: map['color'] as String,
-      fuel: map['fuel'] as String,
-      chassis: map['chassis'] as String,
-      category: map['category'] as String,
+      id: map['id'] as String? ?? '',
+      plate: map['plate'] as String? ?? '',
+      renavam: map['renavam'] as String? ?? '',
+      brand: map['brand'] as String? ?? '',
+      model: map['model'] as String? ?? '',
+      yearFabrication: (map['yearFabrication'] as num?)?.toInt() ?? DateTime.now().year,
+      yearModel: (map['yearModel'] as num?)?.toInt() ?? DateTime.now().year,
+      color: map['color'] as String? ?? '',
+      fuel: map['fuel'] as String? ?? '',
+      chassis: map['chassis'] as String? ?? '',
+      category: map['category'] as String? ?? '',
+      documentUrl: map['documentUrl'] as String?,
     );
   }
 
