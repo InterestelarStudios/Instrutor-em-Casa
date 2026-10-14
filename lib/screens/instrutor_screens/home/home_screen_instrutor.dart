@@ -37,7 +37,7 @@ class _HomeScreenInstrutorState extends State<HomeScreenInstrutor> with Automati
   @override
   void initState() {
     super.initState();
-    queryAulaConfirmadas = setQuery([LessonStatus.accepted]);
+    queryAulaConfirmadas = setQuery([LessonStatus.accepted, LessonStatus.requested]);
     queryAulaAtivas = setQuery([LessonStatus.active]);
   }
 

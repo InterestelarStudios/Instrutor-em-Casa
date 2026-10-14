@@ -95,7 +95,7 @@ class AulaBuild extends StatelessWidget {
                         );
                       }
                     },
-                    icon: Icon(Ionicons.chatbox_outline),
+                    icon: Icon(Ionicons.chatboxOutline),
                     label: Text("Acessar chat")
                   ),
                 ],

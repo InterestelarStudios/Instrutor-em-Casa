@@ -107,7 +107,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
               final isFav = snapshot.hasData && snapshot.data!.exists;
               return IconButton(
                 icon: Icon(
-                  isFav ? Ionicons.heart : Ionicons.heart_outline,
+                  isFav ? Ionicons.heart : Ionicons.heartOutline,
                   color: isFav ? Colors.red : Colors.white,
                 ),
                 onPressed: () async {
@@ -394,7 +394,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           padding: const EdgeInsets.all(15),
           child: Row(
             children: [
-              const Icon(Ionicons.car_outline, color: AppColors.textMuted),
+              const Icon(Ionicons.carOutline, color: AppColors.textMuted),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(

@@ -189,7 +189,7 @@ class _InstrutorBaseScreenState extends State<InstrutorBaseScreen> {
                       title: Text("Ganhos"),
                     ),
                     BottomBarItem(
-                      icon: Icon(Ionicons.chatbox_outline),
+                      icon: Icon(Ionicons.chatboxOutline),
                       activeColor: primary,
                       title: Text("Chat"),
                     ),

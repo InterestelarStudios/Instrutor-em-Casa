@@ -397,7 +397,7 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
         aluno: widget.myUser.toDetails(),
         instrutor: widget.usuario.toDetails(),
         category: category!,
-        status: LessonStatus.requested,
+        status: LessonStatus.accepted,
         date: sessions.first.date,
         created: Timestamp.now(),
         horasContratadas: hours!,
@@ -469,7 +469,7 @@ class _AgendarAulaScreenState extends State<AgendarAulaScreen> {
           navigator.context,
           success: true,
           message:
-              "Proposta enviada, fique atento para a resposta do instrutor!",
+              "Aula confirmada com sucesso! Seu instrutor já foi notificado.",
         );
       }
     } catch (e) {

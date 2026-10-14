@@ -90,7 +90,7 @@ class _ChangeEmailScreenState extends State<ChangeEmailScreen> {
               obscureText: true,
               decoration: const InputDecoration(
                 labelText: "Senha Atual",
-                prefixIcon: Icon(Ionicons.lock_closed_outline),
+                prefixIcon: Icon(Ionicons.lockClosedOutline),
               ),
               validator: (value) => value!.isEmpty ? "Informe a senha atual" : null,
             ),
@@ -100,7 +100,7 @@ class _ChangeEmailScreenState extends State<ChangeEmailScreen> {
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
                 labelText: "Novo E-mail",
-                prefixIcon: Icon(Ionicons.mail_outline),
+                prefixIcon: Icon(Ionicons.mailOutline),
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) return "Informe o novo e-mail";

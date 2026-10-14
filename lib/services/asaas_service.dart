@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 import 'package:instrutor_em_casa/models/aula.dart';
 
 class AsaasService {
@@ -29,8 +30,10 @@ class AsaasService {
       }
       return null;
     } on FirebaseFunctionsException catch (e) {
+      debugPrint("FirebaseFunctionsException code: ${e.code}, message: ${e.message}, details: ${e.details}");
       throw e.message ?? "Erro ao processar pagamento.";
     } catch (e) {
+      debugPrint("Erro inesperado ao processar pagamento: $e");
       throw "Erro inesperado ao processar pagamento: $e";
     }
   }

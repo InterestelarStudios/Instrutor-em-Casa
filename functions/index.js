@@ -78,16 +78,27 @@ exports.asaasWebhook = onRequest(async (req, res) => {
         // --- TRATAMENTO DE PAGAMENTOS ---
         if (event.payment) {
             const payment = event.payment;
-            const aulaId = payment.externalReference;
+            let aulaId = payment.externalReference;
+            let aulaDoc = null;
 
-            if (!aulaId) {
-                console.log("Evento de pagamento ignorado: externalReference (aulaId) não encontrado.");
-                return res.status(200).send("Ignored");
+            if (aulaId) {
+                aulaDoc = await admin.firestore().collection("aulas").doc(aulaId).get();
             }
 
-            const aulaDoc = await admin.firestore().collection("aulas").doc(aulaId).get();
-            if (!aulaDoc.exists) {
-                console.log(`Aula ${aulaId} não encontrada no Firestore.`);
+            // Fallback: se não encontrar por externalReference, busca por paymentId
+            if (!aulaDoc || !aulaDoc.exists) {
+                const querySnap = await admin.firestore().collection("aulas")
+                    .where("paymentId", "==", payment.id)
+                    .limit(1)
+                    .get();
+                if (!querySnap.empty) {
+                    aulaDoc = querySnap.docs[0];
+                    aulaId = aulaDoc.id;
+                }
+            }
+
+            if (!aulaDoc || !aulaDoc.exists) {
+                console.log(`Aula para o pagamento ${payment.id} (externalReference: ${payment.externalReference}) não encontrada no Firestore.`);
                 return res.status(200).send("Not Found");
             }
 
@@ -231,8 +242,8 @@ exports.onLessonRequested = onDocumentCreated("aulas/{aulaId}", async (event) =>
         const aula = snapshot.data();
         await notifyUser(
             aula.instrutor.id, 
-            "Nova Solicitação de Aula", 
-            `Você recebeu uma proposta para a categoria ${aula.category}.`, 
+            "Nova Aula Confirmada!", 
+            `O aluno ${aula.aluno?.name || 'Aluno'} agendou uma aula para a categoria ${aula.category}.`, 
             "/aula_details", 
             event.params.aulaId
         );

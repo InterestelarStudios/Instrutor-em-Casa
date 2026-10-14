@@ -1,7 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:instrutor_em_casa/models/aula.dart';
 import 'package:instrutor_em_casa/models/notification.dart';
 import 'package:instrutor_em_casa/models/usuario.dart';
+import 'package:instrutor_em_casa/screens/aula_details/aula_details_screen.dart';
+import 'package:instrutor_em_casa/widgets/dialog_services.dart';
 import 'package:instrutor_em_casa/widgets/theme.dart';
 import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
@@ -62,7 +65,7 @@ class NotificationsScreen extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Ionicons.notifications_off_outline,
+                        Ionicons.notificationsOffOutline,
                         size: 60,
                         color: Colors.grey[400],
                       ),
@@ -121,7 +124,7 @@ class NotificationsScreen extends StatelessWidget {
             shape: BoxShape.circle,
           ),
           child: Icon(
-            notification.read ? Ionicons.notifications_outline : Ionicons.notifications,
+            notification.read ? Ionicons.notificationsOutline : Ionicons.notifications,
             color: notification.read ? Colors.grey : AppColors.primary,
           ),
         ),
@@ -150,28 +153,59 @@ class NotificationsScreen extends StatelessWidget {
   }
 
   Future<void> _markAsRead(BuildContext context, AppNotification notification) async {
-    if (notification.read) return;
+    if (!notification.read) {
+      final batch = FirebaseFirestore.instance.batch();
+      
+      // Marca como lida
+      batch.update(
+        FirebaseFirestore.instance.collection('notifications').doc(notification.id),
+        {'read': true},
+      );
 
-    final batch = FirebaseFirestore.instance.batch();
-    
-    // Marca como lida
-    batch.update(
-      FirebaseFirestore.instance.collection('notifications').doc(notification.id),
-      {'read': true},
-    );
+      // Decrementa o contador do usuário
+      batch.update(
+        FirebaseFirestore.instance.collection('users').doc(usuario.id),
+        {'notificationsCount': FieldValue.increment(-1)},
+      );
 
-    // Decrementa o contador do usuário
-    batch.update(
-      FirebaseFirestore.instance.collection('users').doc(usuario.id),
-      {'notificationsCount': FieldValue.increment(-1)},
-    );
+      await batch.commit();
+    }
 
-    await batch.commit();
+    // Navegação para a aula se houver rota ou contentId de aula
+    final route = notification.route;
+    final contentId = notification.contentId;
+    if (contentId != null && (route == '/aula_details' || route == 'aula_details' || route == null)) {
+      _openAulaDetails(context, contentId);
+    }
+  }
 
-    // Navegação se houver rota
-    if (notification.route != null) {
-      // TODO: Implement deep linking or navigation based on route
-      print("Navegando para: ${notification.route} com ID: ${notification.contentId}");
+  Future<void> _openAulaDetails(BuildContext context, String aulaId) async {
+    DialogServices.loading2(context);
+    try {
+      final doc = await FirebaseFirestore.instance.collection('aulas').doc(aulaId).get();
+      if (!context.mounted) return;
+      Navigator.pop(context); // Fecha loading
+
+      if (doc.exists && doc.data() != null) {
+        final aula = Aula.fromMap(doc.data()!);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AulaDetailsScreen(aula: aula, usuario: usuario),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Aula não encontrada.")),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erro ao carregar detalhes da aula: $e")),
+        );
+      }
     }
   }
 }

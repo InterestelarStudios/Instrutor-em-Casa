@@ -11,6 +11,7 @@ import 'package:instrutor_em_casa/screens/profile/favoritos_screen.dart';
 import 'package:instrutor_em_casa/screens/profile/my_documents_screen.dart';
 import 'package:instrutor_em_casa/screens/profile/historico_cobrancas_screen.dart';
 import 'package:instrutor_em_casa/screens/profile/horas_direcao_screen.dart';
+import 'package:instrutor_em_casa/screens/profile/minhas_avaliacoes_screen.dart';
 import 'package:instrutor_em_casa/screens/profile/termos_politicas_screen.dart';
 import 'package:instrutor_em_casa/widgets/avatar.dart';
 import 'package:instrutor_em_casa/widgets/dialog_services.dart';
@@ -70,7 +71,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         title("Minha conta"),
         ListTile(
-          leading: Icon(Ionicons.pencil_outline),
+          leading: Icon(Ionicons.pencilOutline),
           title: Text("Editar Perfil"),
           onTap: () => Navigator.push(
             context,
@@ -80,7 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         ListTile(
-          leading: Icon(Ionicons.document_outline),
+          leading: Icon(Ionicons.documentOutline),
           title: Text("Meus Documentos"),
           onTap: () => Navigator.push(
             context,
@@ -90,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         ListTile(
-          leading: Icon(Ionicons.key_outline),
+          leading: Icon(Ionicons.keyOutline),
           title: Text("Alterar Senha"),
           onTap: () => Navigator.push(
             context,
@@ -98,7 +99,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         ListTile(
-          leading: Icon(Ionicons.mail_outline),
+          leading: Icon(Ionicons.mailOutline),
           title: Text("Alterar E-mail"),
           onTap: () => Navigator.push(
             context,
@@ -108,7 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title("Aulas"),
         if (isAluno) ...[
           ListTile(
-            leading: const Icon(Ionicons.time_outline),
+            leading: const Icon(Ionicons.timeOutline),
             title: const Text("Horas de direção"),
             onTap: () => Navigator.push(
               context,
@@ -119,12 +120,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
         ListTile(
-          leading: Icon(Ionicons.star_outline),
-          title: Text("Minhas avaliações"),
+          leading: const Icon(Ionicons.starOutline),
+          title: const Text("Minhas avaliações"),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MinhasAvaliacoesScreen(usuario: widget.usuario),
+            ),
+          ),
         ),
         if (isAluno) ...[
           ListTile(
-            leading: const Icon(Ionicons.heart_outline),
+            leading: const Icon(Ionicons.heartOutline),
             title: const Text("Instrutores Favoritos"),
             onTap: () => Navigator.push(
               context,
@@ -134,24 +141,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ],
-        title("Pagamentos"),
-        ListTile(
-          leading: Icon(Ionicons.card_outline),
-          title: Text("Meus cartões"),
-        ),
-        ListTile(
-          leading: const Icon(Ionicons.receipt_outline),
-          title: const Text("Histórico de Cobranças"),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => HistoricoCobrancasScreen(usuario: widget.usuario),
+        if (isAluno) ...[
+          title("Pagamentos"),
+          ListTile(
+            leading: const Icon(Ionicons.receiptOutline),
+            title: const Text("Histórico de Cobranças"),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => HistoricoCobrancasScreen(usuario: widget.usuario),
+              ),
             ),
           ),
-        ),
+        ],
         title("Suporte"),
         ListTile(
-          leading: Icon(Ionicons.help_outline),
+          leading: Icon(Ionicons.helpOutline),
           title: Text("Central de Ajuda"),
           onTap: () => Navigator.push(
             context,
@@ -159,7 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         ListTile(
-          leading: Icon(Ionicons.information_circle_outline),
+          leading: Icon(Ionicons.informationCircleOutline),
           title: Text("Termos e Políticas"),
           onTap: () => Navigator.push(
             context,
@@ -167,7 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         ListTile(
-          leading: Icon(Ionicons.phone_portrait_outline),
+          leading: Icon(Ionicons.phonePortraitOutline),
           title: Text("Avaliar o App"),
         ),
         title("Conta"),
@@ -196,7 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           },
           title: Text("Encerrar Sessão"),
-          leading: Icon(Ionicons.log_out_outline),
+          leading: Icon(Ionicons.logOutOutline),
         ),
         ListTile(
           onTap: () => Navigator.push(
@@ -206,7 +211,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           leading: Icon(
-            Ionicons.phone_portrait_outline,
+            Ionicons.phonePortraitOutline,
             color: AppColors.emergency,
           ),
           title: Text(

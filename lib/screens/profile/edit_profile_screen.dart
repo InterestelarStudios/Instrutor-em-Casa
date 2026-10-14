@@ -101,7 +101,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   right: 0,
                   child: FloatingActionButton.small(
                     onPressed: _pickImage,
-                    child: const Icon(Ionicons.camera_outline),
+                    child: const Icon(Ionicons.cameraOutline),
                   ),
                 ),
               ],
@@ -112,7 +112,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             controller: controllerName,
             decoration: const InputDecoration(
               labelText: "Nome de Usuário",
-              prefixIcon: Icon(Ionicons.person_outline),
+              prefixIcon: Icon(Ionicons.personOutline),
             ),
           ),
           const SizedBox(height: 40),

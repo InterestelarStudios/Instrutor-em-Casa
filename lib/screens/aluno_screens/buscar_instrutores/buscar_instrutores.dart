@@ -303,7 +303,7 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
                             padding: const EdgeInsets.all(40),
                             child: Column(
                               children: [
-                                Icon(Ionicons.search_outline, size: 50, color: AppColors.textMuted),
+                                Icon(Ionicons.searchOutline, size: 50, color: AppColors.textMuted),
                                 const SizedBox(height: 10),
                                 Text(
                                   "Nenhum instrutor encontrado nesse raio.",
@@ -429,7 +429,7 @@ class _BuscarInstrutoresState extends State<BuscarInstrutores> {
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                         child: Row(
                           children: [
-                            Icon(Ionicons.locate_outline, size: 18, color: AppColors.primary),
+                            Icon(Ionicons.locateOutline, size: 18, color: AppColors.primary),
                             const SizedBox(width: 8),
                             Text(
                               "${radius.toInt()} km²",

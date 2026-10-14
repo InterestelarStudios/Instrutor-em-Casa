@@ -67,7 +67,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
               ),
               const SizedBox(height: 40),
               _permissionTile(
-                icon: Ionicons.location_outline,
+                icon: Ionicons.locationOutline,
                 title: "Localização",
                 description: "Para encontrar instrutores próximos e rastrear o trajeto das aulas.",
                 isGranted: locationGranted,
@@ -75,7 +75,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
               ),
               const SizedBox(height: 20),
               _permissionTile(
-                icon: Ionicons.camera_outline,
+                icon: Ionicons.cameraOutline,
                 title: "Câmera",
                 description: "Para realizar o check-in via QR Code e tirar fotos dos documentos.",
                 isGranted: cameraGranted,
@@ -83,7 +83,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
               ),
               const SizedBox(height: 20),
               _permissionTile(
-                icon: Ionicons.notifications_outline,
+                icon: Ionicons.notificationsOutline,
                 title: "Notificações",
                 description: "Para acompanhar o trajeto da aula em tempo real.",
                 isGranted: notificationGranted,
@@ -134,7 +134,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(description, style: const TextStyle(fontSize: 12)),
         trailing: isGranted 
-          ? const Icon(Ionicons.checkmark_circle, color: AppColors.success)
+          ? const Icon(Ionicons.checkmarkCircle, color: AppColors.success)
           : TextButton(onPressed: onTap, child: const Text("Permitir")),
       ),
     );

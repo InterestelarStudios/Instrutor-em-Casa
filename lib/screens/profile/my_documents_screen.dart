@@ -102,7 +102,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
         padding: const EdgeInsets.all(15),
         child: Row(
           children: [
-            const Icon(Ionicons.information_circle_outline, color: Colors.blue),
+            const Icon(Ionicons.informationCircleOutline, color: Colors.blue),
             const SizedBox(width: 15),
             Expanded(
               child: Text(
@@ -152,7 +152,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
             ),
             trailing: doc != null 
               ? IconButton(
-                  icon: const Icon(Ionicons.eye_outline),
+                  icon: const Icon(Ionicons.eyeOutline),
                   onPressed: () => launchUrl(Uri.parse(doc.url)),
                 )
               : null,

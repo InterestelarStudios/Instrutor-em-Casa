@@ -48,7 +48,7 @@ class _CancellationScreenState extends State<CancellationScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.pagePadding),
         children: [
-          const Icon(Ionicons.alert_circle_outline, size: 80, color: AppColors.emergency),
+          const Icon(Ionicons.alertCircleOutline, size: 80, color: AppColors.emergency),
           const SizedBox(height: 20),
           Text(
             "Por que você deseja cancelar?",

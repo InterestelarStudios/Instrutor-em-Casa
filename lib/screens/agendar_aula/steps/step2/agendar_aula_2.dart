@@ -26,106 +26,12 @@ class AgendarAula2 extends StatefulWidget {
 
 class _AgendarAula2State extends State<AgendarAula2> with AutomaticKeepAliveClientMixin {
   List<SessaoAula> sessions = [];
-  List<ScheduledRange> _existingSessions = [];
-  bool _isLoading = true;
+  BuildContext? _loadingDialogContext;
 
   @override
   void initState() {
     super.initState();
     _initializeSessions();
-    _loadExistingSessions();
-  }
-
-  Future<void> _loadExistingSessions() async {
-    try {
-      final studentQuery = await FirebaseFirestore.instance
-          .collection("aulas")
-          .where("aluno.id", isEqualTo: widget.alunoId)
-          .where("status", whereIn: ["requested", "accepted", "active", "partially_done"])
-          .get();
-
-      final instructorQuery = await FirebaseFirestore.instance
-          .collection("aulas")
-          .where("instrutor.id", isEqualTo: widget.instrutorId)
-          .where("status", whereIn: ["requested", "accepted", "active", "partially_done"])
-          .get();
-
-      List<ScheduledRange> ranges = [];
-
-      for (var doc in studentQuery.docs) {
-        final aulaData = doc.data();
-        final sessionsList = (aulaData['sessions'] as List<dynamic>?) ?? [];
-        final instrutorName = aulaData['instrutor']['name'] as String? ?? "Instrutor";
-        for (var sMap in sessionsList) {
-          final statusStr = sMap['status'] as String? ?? 'scheduled';
-          if (statusStr == 'completed' || statusStr == 'missed') continue;
-
-          final date = (sMap['date'] as Timestamp).toDate();
-          final duration = sMap['duration'] as int? ?? 1;
-          ranges.add(ScheduledRange(
-            start: date,
-            end: date.add(Duration(hours: duration)),
-            label: "aluno",
-            otherName: instrutorName,
-          ));
-        }
-      }
-
-      for (var doc in instructorQuery.docs) {
-        final aulaData = doc.data();
-        final sessionsList = (aulaData['sessions'] as List<dynamic>?) ?? [];
-        final alunoName = aulaData['aluno']['name'] as String? ?? "Aluno";
-        for (var sMap in sessionsList) {
-          final statusStr = sMap['status'] as String? ?? 'scheduled';
-          if (statusStr == 'completed' || statusStr == 'missed') continue;
-
-          final date = (sMap['date'] as Timestamp).toDate();
-          final duration = sMap['duration'] as int? ?? 1;
-          ranges.add(ScheduledRange(
-            start: date,
-            end: date.add(Duration(hours: duration)),
-            label: "instrutor",
-            otherName: alunoName,
-          ));
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _existingSessions = ranges;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-      debugPrint("Erro ao carregar sessões existentes: $e");
-    }
-  }
-
-  String? _checkConflict(DateTime start, int durationHours) {
-    final end = start.add(Duration(hours: durationHours));
-
-    for (var existing in _existingSessions) {
-      final bufferedExistingStart = existing.start.subtract(const Duration(minutes: 30));
-      final bufferedExistingEnd = existing.end.add(const Duration(minutes: 30));
-
-      if (start.isBefore(bufferedExistingEnd) && end.isAfter(bufferedExistingStart)) {
-        final formattedDate = DateFormat('dd/MM/yyyy').format(existing.start);
-        final formattedStart = DateFormat('HH:mm').format(existing.start);
-        final formattedEnd = DateFormat('HH:mm').format(existing.end);
-
-        if (existing.label == "aluno") {
-          return "Você já possui uma aula agendada para este dia ($formattedDate) das $formattedStart às $formattedEnd com o instrutor ${existing.otherName}. Por favor, selecione outro horário.";
-        } else {
-          return "O instrutor já possui uma aula agendada para este dia ($formattedDate) das $formattedStart às $formattedEnd com o aluno ${existing.otherName}. Por favor, selecione outro horário.";
-        }
-      }
-    }
-    return null;
   }
 
   @override
@@ -141,20 +47,18 @@ class _AgendarAula2State extends State<AgendarAula2> with AutomaticKeepAliveClie
   void _initializeSessions() {
     List<SessaoAula> newSessions = [];
     int remainingHours = widget.hours;
-    
+
     while (remainingHours > 0) {
       int duration = remainingHours < widget.hoursPerSession ? remainingHours : widget.hoursPerSession;
       newSessions.add(SessaoAula(
         id: const Uuid().v4(),
-        // Initialize with a dummy date to indicate 'not scheduled'
-        date: Timestamp.fromDate(DateTime(2000)), 
+        date: Timestamp.fromDate(DateTime(2000)),
         duration: duration,
       ));
       remainingHours -= duration;
     }
-    
-    // Ensure actual check-in fields are null
-    for(var s in newSessions) {
+
+    for (var s in newSessions) {
       s.start = null;
       s.end = null;
     }
@@ -162,20 +66,354 @@ class _AgendarAula2State extends State<AgendarAula2> with AutomaticKeepAliveClie
     setState(() {
       sessions = newSessions;
     });
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onChangedSessions.call(sessions);
     });
   }
 
-  Future<void> _pickDateTime(int index) async {
-    if (_isLoading) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Aguarde, verificando disponibilidade de horários...")),
+  void _showLoadingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        _loadingDialogContext = dialogCtx;
+        return PopScope(
+          canPop: false,
+          child: Dialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3.5,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    "Verificando Disponibilidade",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "Consultando agenda do aluno e do instrutor...",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _hideLoadingDialog() {
+    if (_loadingDialogContext != null) {
+      if (_loadingDialogContext!.mounted) {
+        Navigator.of(_loadingDialogContext!).pop();
+      }
+      _loadingDialogContext = null;
+    }
+  }
+
+  void _showConflictDialog({
+    required bool isAluno,
+    required String message,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.event_busy_rounded,
+                color: Colors.red.shade600,
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                "Horário Indisponível",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isAluno ? Colors.orange.shade50 : Colors.purple.shade50,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: isAluno ? Colors.orange.shade200 : Colors.purple.shade200,
+                ),
+              ),
+              child: Text(
+                isAluno ? "Conflito na sua agenda (Aluno)" : "Conflito na agenda do Instrutor",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isAluno ? Colors.orange.shade900 : Colors.purple.shade900,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              message,
+              style: const TextStyle(
+                fontSize: 15,
+                height: 1.4,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.blue.shade700,
+              textStyle: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Entendi"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<_ConflictCheckResult> _verifyAvailability({
+    required DateTime candidateStart,
+    required int durationHours,
+    required int sessionIndex,
+  }) async {
+    final candidateEnd = candidateStart.add(Duration(hours: durationHours));
+
+    // 1. Horário no passado
+    if (candidateStart.isBefore(DateTime.now())) {
+      return _ConflictCheckResult(
+        hasConflict: true,
+        isAluno: true,
+        message: "Não será possível realizar a aula nesta data ou horário. O horário selecionado já passou. Por favor, escolha uma data e horário futuros.",
       );
-      return;
     }
 
+    // 2. Conflito com outras sessões deste mesmo pacote
+    for (int i = 0; i < sessions.length; i++) {
+      if (i == sessionIndex) continue;
+      final other = sessions[i];
+      final otherStart = other.date.toDate();
+      if (otherStart.year <= 2000) continue;
+      final otherEnd = otherStart.add(Duration(hours: other.duration));
+
+      if (candidateStart.isBefore(otherEnd) && candidateEnd.isAfter(otherStart)) {
+        final formattedDate = DateFormat('dd/MM/yyyy').format(otherStart);
+        final formattedStart = DateFormat('HH:mm').format(otherStart);
+        final formattedEnd = DateFormat('HH:mm').format(otherEnd);
+
+        return _ConflictCheckResult(
+          hasConflict: true,
+          isAluno: true,
+          message: "Não será possível realizar a aula nesta data ou horário.\n\n"
+              "Você já selecionou a Sessão ${i + 1} para este mesmo período ($formattedDate das $formattedStart às $formattedEnd).\n\n"
+              "Por favor, escolha outro horário.",
+        );
+      }
+    }
+
+    // 3. Consulta em tempo real no Firestore para aluno e instrutor
+    final results = await Future.wait([
+      FirebaseFirestore.instance
+          .collection("aulas")
+          .where("aluno.id", isEqualTo: widget.alunoId)
+          .where("status", whereIn: ["requested", "accepted", "active", "partially_done"])
+          .get(),
+      FirebaseFirestore.instance
+          .collection("aulas")
+          .where("instrutor.id", isEqualTo: widget.instrutorId)
+          .where("status", whereIn: ["requested", "accepted", "active", "partially_done"])
+          .get(),
+    ]);
+
+    final alunoDocs = results[0].docs;
+    final instrutorDocs = results[1].docs;
+
+    // 4. Verificar conflito do aluno
+    for (var doc in alunoDocs) {
+      final aulaData = doc.data();
+      final sessionsList = (aulaData['sessions'] as List<dynamic>?) ?? [];
+
+      if (sessionsList.isNotEmpty) {
+        for (var sMap in sessionsList) {
+          if (sMap is! Map<String, dynamic>) continue;
+          final statusStr = sMap['status'] as String? ?? 'scheduled';
+          if (statusStr == 'completed' || statusStr == 'missed') continue;
+
+          DateTime? existingStart;
+          if (sMap['date'] is Timestamp) {
+            existingStart = (sMap['date'] as Timestamp).toDate();
+          } else if (sMap['date'] is String) {
+            existingStart = DateTime.tryParse(sMap['date'] as String);
+          }
+          if (existingStart == null || existingStart.year <= 2000) continue;
+
+          final duration = (sMap['duration'] as num?)?.toInt() ?? 1;
+          final existingEnd = existingStart.add(Duration(hours: duration));
+
+          if (candidateStart.isBefore(existingEnd) && candidateEnd.isAfter(existingStart)) {
+            final formattedDate = DateFormat('dd/MM/yyyy').format(existingStart);
+            final formattedStart = DateFormat('HH:mm').format(existingStart);
+            final formattedEnd = DateFormat('HH:mm').format(existingEnd);
+
+            return _ConflictCheckResult(
+              hasConflict: true,
+              isAluno: true,
+              message: "Não será possível realizar a aula nesta data ou horário.\n\n"
+                  "Você já possui uma aula agendada para o dia $formattedDate das $formattedStart às $formattedEnd.\n\n"
+                  "Por favor, escolha outro horário.",
+            );
+          }
+        }
+      } else {
+        DateTime? existingStart;
+        if (aulaData['date'] is Timestamp) {
+          existingStart = (aulaData['date'] as Timestamp).toDate();
+        } else if (aulaData['date'] is String) {
+          existingStart = DateTime.tryParse(aulaData['date'] as String);
+        }
+        if (existingStart != null && existingStart.year > 2000) {
+          final duration = (aulaData['horasContratadas'] as num?)?.toInt() ?? 1;
+          final existingEnd = existingStart.add(Duration(hours: duration));
+
+          if (candidateStart.isBefore(existingEnd) && candidateEnd.isAfter(existingStart)) {
+            final formattedDate = DateFormat('dd/MM/yyyy').format(existingStart);
+            final formattedStart = DateFormat('HH:mm').format(existingStart);
+            final formattedEnd = DateFormat('HH:mm').format(existingEnd);
+
+            return _ConflictCheckResult(
+              hasConflict: true,
+              isAluno: true,
+              message: "Não será possível realizar a aula nesta data ou horário.\n\n"
+                  "Você já possui uma aula agendada para o dia $formattedDate das $formattedStart às $formattedEnd.\n\n"
+                  "Por favor, escolha outro horário.",
+            );
+          }
+        }
+      }
+    }
+
+    // 5. Verificar conflito do instrutor (incluindo aulas anteriores que ocupem o horário)
+    for (var doc in instrutorDocs) {
+      final aulaData = doc.data();
+      final sessionsList = (aulaData['sessions'] as List<dynamic>?) ?? [];
+
+      if (sessionsList.isNotEmpty) {
+        for (var sMap in sessionsList) {
+          if (sMap is! Map<String, dynamic>) continue;
+          final statusStr = sMap['status'] as String? ?? 'scheduled';
+          if (statusStr == 'completed' || statusStr == 'missed') continue;
+
+          DateTime? existingStart;
+          if (sMap['date'] is Timestamp) {
+            existingStart = (sMap['date'] as Timestamp).toDate();
+          } else if (sMap['date'] is String) {
+            existingStart = DateTime.tryParse(sMap['date'] as String);
+          }
+          if (existingStart == null || existingStart.year <= 2000) continue;
+
+          final duration = (sMap['duration'] as num?)?.toInt() ?? 1;
+          final existingEnd = existingStart.add(Duration(hours: duration));
+
+          if (candidateStart.isBefore(existingEnd) && candidateEnd.isAfter(existingStart)) {
+            final formattedDate = DateFormat('dd/MM/yyyy').format(existingStart);
+            final formattedStart = DateFormat('HH:mm').format(existingStart);
+            final formattedEnd = DateFormat('HH:mm').format(existingEnd);
+
+            return _ConflictCheckResult(
+              hasConflict: true,
+              isAluno: false,
+              message: "Não será possível realizar a aula nesta data ou horário.\n\n"
+                  "O instrutor já possui uma aula agendada que ocupa este horário (dia $formattedDate das $formattedStart às $formattedEnd).\n\n"
+                  "Por favor, selecione outro horário.",
+            );
+          }
+        }
+      } else {
+        DateTime? existingStart;
+        if (aulaData['date'] is Timestamp) {
+          existingStart = (aulaData['date'] as Timestamp).toDate();
+        } else if (aulaData['date'] is String) {
+          existingStart = DateTime.tryParse(aulaData['date'] as String);
+        }
+        if (existingStart != null && existingStart.year > 2000) {
+          final duration = (aulaData['horasContratadas'] as num?)?.toInt() ?? 1;
+          final existingEnd = existingStart.add(Duration(hours: duration));
+
+          if (candidateStart.isBefore(existingEnd) && candidateEnd.isAfter(existingStart)) {
+            final formattedDate = DateFormat('dd/MM/yyyy').format(existingStart);
+            final formattedStart = DateFormat('HH:mm').format(existingStart);
+            final formattedEnd = DateFormat('HH:mm').format(existingEnd);
+
+            return _ConflictCheckResult(
+              hasConflict: true,
+              isAluno: false,
+              message: "Não será possível realizar a aula nesta data ou horário.\n\n"
+                  "O instrutor já possui uma aula agendada que ocupa este horário (dia $formattedDate das $formattedStart às $formattedEnd).\n\n"
+                  "Por favor, selecione outro horário.",
+            );
+          }
+        }
+      }
+    }
+
+    return _ConflictCheckResult(hasConflict: false);
+  }
+
+  Future<void> _pickDateTime(int index) async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: _getInitialDate(index),
@@ -184,76 +422,140 @@ class _AgendarAula2State extends State<AgendarAula2> with AutomaticKeepAliveClie
       helpText: "Selecione a data da Sessão ${index + 1}",
     );
 
-    if (pickedDate != null) {
-      final TimeOfDay? pickedTime = await showTimePicker(
-        context: context,
-        initialTime: const TimeOfDay(hour: 8, minute: 0),
-        helpText: "Horário de início da aula",
+    if (pickedDate == null || !mounted) return;
+
+    final TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 8, minute: 0),
+      helpText: "Horário de início da aula",
+    );
+
+    if (pickedTime == null || !mounted) return;
+
+    final startDateTime = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+
+    // Exibir o popup de loading "Verificando Disponibilidade"
+    _showLoadingDialog();
+
+    _ConflictCheckResult? conflictResult;
+    try {
+      final checkFuture = _verifyAvailability(
+        candidateStart: startDateTime,
+        durationHours: sessions[index].duration,
+        sessionIndex: index,
       );
+      final delayFuture = Future.delayed(const Duration(milliseconds: 600));
 
-      if (pickedTime != null) {
-        final startDateTime = DateTime(
-          pickedDate.year,
-          pickedDate.month,
-          pickedDate.day,
-          pickedTime.hour,
-          pickedTime.minute,
-        );
-
-        final conflictMessage = _checkConflict(startDateTime, sessions[index].duration);
-        if (conflictMessage != null) {
-          if (mounted) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text("Conflito de Horário"),
-                content: Text(conflictMessage),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("Entendi"),
-                  ),
-                ],
-              ),
-            );
-          }
-          return;
-        }
-
-        setState(() {
-          sessions[index].date = Timestamp.fromDate(startDateTime);
-          sessions[index].start = null; 
-          sessions[index].end = null; 
-          
-          // Reset subsequent sessions if they violate the chronological rule
-          _validateAndResetSubsequent(index);
-        });
-        widget.onChangedSessions.call(sessions);
+      final results = await Future.wait([checkFuture, delayFuture]);
+      conflictResult = results[0] as _ConflictCheckResult;
+    } catch (e) {
+      debugPrint("Erro ao verificar disponibilidade: $e");
+    } finally {
+      if (mounted) {
+        _hideLoadingDialog();
       }
     }
+
+    if (!mounted) return;
+
+    if (conflictResult == null) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text("Erro de Verificação"),
+          content: const Text(
+            "Não foi possível verificar a disponibilidade no momento. Verifique sua conexão e tente novamente.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    if (conflictResult.hasConflict) {
+      _showConflictDialog(
+        isAluno: conflictResult.isAluno,
+        message: conflictResult.message ??
+            "Não será possível realizar a aula nesta data ou horário.",
+      );
+      return;
+    }
+
+    // Sem conflito: define data e horário da sessão
+    setState(() {
+      sessions[index].date = Timestamp.fromDate(startDateTime);
+      sessions[index].start = null;
+      sessions[index].end = null;
+      _validateAndResetSubsequent(index);
+    });
+    widget.onChangedSessions.call(sessions);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text("Horário da Sessão ${index + 1} confirmado!"),
+          ],
+        ),
+        backgroundColor: Colors.green.shade700,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   DateTime _getMinDate(int index) {
-    if (index == 0) return DateTime.now();
-    // Next session must be at least one day after the previous one
-    return sessions[index - 1].date.toDate().add(const Duration(days: 1));
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (index == 0) return today;
+
+    final prevDate = sessions[index - 1].date.toDate();
+    if (prevDate.year > 2000) {
+      final prevDay = DateTime(prevDate.year, prevDate.month, prevDate.day);
+      return prevDay.isAfter(today) ? prevDay : today;
+    }
+    return today;
   }
 
   DateTime _getInitialDate(int index) {
-    DateTime min = _getMinDate(index);
-    // If current session already has a date and it's valid, keep it, else use min
-    if (sessions[index].date.toDate().year > 2000 && sessions[index].date.toDate().isAfter(min.subtract(const Duration(seconds: 1)))) {
-      return sessions[index].date.toDate();
+    final min = _getMinDate(index);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final baseMin = min.isBefore(today) ? today : min;
+
+    final currDate = sessions[index].date.toDate();
+    if (currDate.year > 2000 && !currDate.isBefore(baseMin)) {
+      return DateTime(currDate.year, currDate.month, currDate.day);
     }
-    return min;
+    return baseMin;
   }
 
   void _validateAndResetSubsequent(int startIndex) {
     for (int i = startIndex + 1; i < sessions.length; i++) {
-      DateTime prevDate = sessions[i - 1].date.toDate();
-      if (sessions[i].date.toDate().year > 2000) {
-        DateTime currDate = sessions[i].date.toDate();
-        if (!currDate.isAfter(prevDate)) {
+      final prevSession = sessions[i - 1];
+      final prevDate = prevSession.date.toDate();
+      if (prevDate.year <= 2000) continue;
+      final prevEnd = prevDate.add(Duration(hours: prevSession.duration));
+
+      final currSession = sessions[i];
+      final currDate = currSession.date.toDate();
+      if (currDate.year > 2000) {
+        if (currDate.isBefore(prevEnd)) {
           sessions[i].date = Timestamp.fromDate(DateTime(2000));
         }
       }
@@ -263,19 +565,6 @@ class _AgendarAula2State extends State<AgendarAula2> with AutomaticKeepAliveClie
   @override
   Widget build(BuildContext context) {
     super.build(context);
-
-    if (_isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 15),
-            Text("Verificando disponibilidade de horários...", style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-      );
-    }
 
     return ListView.builder(
       padding: const EdgeInsets.all(20),
@@ -363,16 +652,15 @@ class _AgendarAula2State extends State<AgendarAula2> with AutomaticKeepAliveClie
   bool get wantKeepAlive => true;
 }
 
-class ScheduledRange {
-  final DateTime start;
-  final DateTime end;
-  final String label; // "aluno" or "instrutor"
-  final String otherName; // Name of the other party
+class _ConflictCheckResult {
+  final bool hasConflict;
+  final bool isAluno;
+  final String? message;
 
-  ScheduledRange({
-    required this.start,
-    required this.end,
-    required this.label,
-    required this.otherName,
+  _ConflictCheckResult({
+    required this.hasConflict,
+    this.isAluno = false,
+    this.message,
   });
 }
+

@@ -145,7 +145,7 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              Icon(Ionicons.car_outline, color: AppColors.textMuted, size: 40),
+              Icon(Ionicons.carOutline, color: AppColors.textMuted, size: 40),
               const SizedBox(height: 10),
               Text(
                 "Nenhum veículo selecionado",
@@ -402,7 +402,7 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
 
     return Card(
       child: ListTile(
-        leading: Icon(Ionicons.map_outline, color: AppColors.primary),
+        leading: Icon(Ionicons.mapOutline, color: AppColors.primary),
         title: const Text("Localização de Atendimento"),
         subtitle: Text(locationText),
         trailing: const Icon(Icons.chevron_right, color: AppColors.primary),
@@ -432,7 +432,7 @@ class _AreaInstrutorScreenState extends State<AreaInstrutorScreen> {
       child: Column(
         children: [
           ListTile(
-            leading: Icon(Ionicons.document_outline, color: AppColors.primary),
+            leading: Icon(Ionicons.documentOutline, color: AppColors.primary),
             title: Text(title),
             trailing: AppChip(
               title: _getStatusLabel(status),

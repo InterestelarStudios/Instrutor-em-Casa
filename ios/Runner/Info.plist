@@ -45,7 +45,46 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Location Permissions -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app needs access to location when open.</string>
+	<string>Precisamos da sua localização para exibir instrutores próximos e permitir o acompanhamento das rotas das aulas.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Precisamos da sua localização em segundo plano para que o aluno possa acompanhar o deslocamento do instrutor em tempo real durante a aula.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Precisamos da sua localização durante o trajeto da aula para garantir a segurança e o rastreamento em tempo real.</string>
+
+	<!-- Camera & Photos Permissions -->
+	<key>NSCameraUsageDescription</key>
+	<string>Precisamos de acesso à câmera para ler QR Codes das aulas e capturar fotos de documentos e perfil.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Precisamos de acesso à sua galeria para você selecionar fotos de documentos do veículo, CNH e perfil.</string>
+
+	<!-- Background Modes -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>location</string>
+		<string>remote-notification</string>
+	</array>
+
+	<!-- URL Schemes & External Links -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+		<string>tel</string>
+		<string>mailto</string>
+	</array>
+
+	<!-- App Transport Security for external webviews/invoices -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+
+	<!-- Export Compliance -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

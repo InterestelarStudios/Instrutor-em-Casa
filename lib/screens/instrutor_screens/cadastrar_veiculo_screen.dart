@@ -598,7 +598,7 @@ class _CadastrarVeiculoScreenState extends State<CadastrarVeiculoScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _pickFromCamera,
-                  icon: const Icon(Ionicons.camera_outline, size: 18),
+                  icon: const Icon(Ionicons.cameraOutline, size: 18),
                   label: const Text("Tirar Foto"),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -609,7 +609,7 @@ class _CadastrarVeiculoScreenState extends State<CadastrarVeiculoScreen> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: _pickFromGalleryOrPdf,
-                  icon: const Icon(Ionicons.document_attach_outline, size: 18),
+                  icon: const Icon(Ionicons.documentAttachOutline, size: 18),
                   label: const Text("Galeria ou PDF"),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -733,11 +733,11 @@ class _CadastrarVeiculoScreenState extends State<CadastrarVeiculoScreen> {
             const Divider(height: 28, thickness: 1),
 
             // Detalhes em linhas
-            _buildDetailItem("RENAVAM", renavam, Ionicons.receipt_outline),
-            _buildDetailItem("Cor Predominante", color, Ionicons.color_palette_outline),
-            _buildDetailItem("Combustível", fuel, Ionicons.flame_outline),
-            _buildDetailItem("Categoria", category, Ionicons.ribbon_outline),
-            _buildDetailItem("Chassi", chassis, Ionicons.barcode_outline),
+            _buildDetailItem("RENAVAM", renavam, Ionicons.receiptOutline),
+            _buildDetailItem("Cor Predominante", color, Ionicons.colorPaletteOutline),
+            _buildDetailItem("Combustível", fuel, Ionicons.flameOutline),
+            _buildDetailItem("Categoria", category, Ionicons.ribbonOutline),
+            _buildDetailItem("Chassi", chassis, Ionicons.barcodeOutline),
           ],
         ),
       ),

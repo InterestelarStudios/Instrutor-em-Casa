@@ -29,7 +29,7 @@ class _HorasDirecaoScreenState extends State<HorasDirecaoScreen> {
         leading: Padding(
           padding: const EdgeInsets.only(left: 8.0),
           child: IconButton(
-            icon: const Icon(Ionicons.chevron_back_outline, color: AppColors.textPrimary, size: 24),
+            icon: const Icon(Ionicons.chevronBackOutline, color: AppColors.textPrimary, size: 24),
             onPressed: () => Navigator.pop(context),
           ),
         ),

@@ -47,14 +47,14 @@ class _UserTypeSelectScreenState extends State<UserTypeSelectScreen> {
                     value: 'logout',
                     child: Row(
                       children: [
-                        Icon(Ionicons.log_out_outline, color: Colors.red, size: 20),
+                        Icon(Ionicons.logOutOutline, color: Colors.red, size: 20),
                         SizedBox(width: 10),
                         Text("Sair", style: TextStyle(color: Colors.red)),
                       ],
                     ),
                   ),
                 ],
-                icon: const Icon(Ionicons.ellipsis_vertical),
+                icon: const Icon(Ionicons.ellipsisVertical),
               ),
             ],
           ),
