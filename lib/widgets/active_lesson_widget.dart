@@ -71,7 +71,7 @@ class _ActiveLessonWidgetState extends State<ActiveLessonWidget> with SingleTick
 
         String title = isInProgress ? "AULA EM ANDAMENTO" : "INSTRUTOR A CAMINHO";
         Color baseColor = isInProgress ? AppColors.success : AppColors.primary;
-        IconData icon = isInProgress ? Ionicons.playCircle : Ionicons.car;
+        IconData icon = isInProgress ? Ionicons.play_circle : Ionicons.car;
 
         if (isInProgress) {
           _duration = DateTime.now().difference(activeSession.start!.toDate());

@@ -59,7 +59,7 @@ class CentralAjudaScreen extends StatelessWidget {
               onTap: _launchWhatsApp,
               leading: const CircleAvatar(
                 backgroundColor: Colors.green,
-                child: Icon(Ionicons.logoWhatsapp, color: Colors.white),
+                child: Icon(Ionicons.logo_whatsapp, color: Colors.white),
               ),
               title: const Text("WhatsApp"),
               subtitle: const Text("Fale conosco agora mesmo"),
@@ -73,7 +73,7 @@ class CentralAjudaScreen extends StatelessWidget {
               onTap: _launchPhone,
               leading: const CircleAvatar(
                 backgroundColor: Colors.blue,
-                child: Icon(Ionicons.callOutline, color: Colors.white),
+                child: Icon(Ionicons.call_outline, color: Colors.white),
               ),
               title: const Text("Ligar agora"),
               subtitle: const Text("(92) 99118-5307"),
@@ -87,7 +87,7 @@ class CentralAjudaScreen extends StatelessWidget {
               onTap: _launchEmail,
               leading: const CircleAvatar(
                 backgroundColor: Colors.grey,
-                child: Icon(Ionicons.mailOutline, color: Colors.white),
+                child: Icon(Ionicons.mail_outline, color: Colors.white),
               ),
               title: const Text("E-mail"),
               subtitle: Text(emailSuporte),

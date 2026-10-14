@@ -90,7 +90,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               obscureText: true,
               decoration: const InputDecoration(
                 labelText: "Senha Atual",
-                prefixIcon: Icon(Ionicons.lockClosedOutline),
+                prefixIcon: Icon(Ionicons.lock_closed_outline),
               ),
               validator: (value) => value!.isEmpty ? "Informe a senha atual" : null,
             ),
@@ -100,7 +100,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               obscureText: true,
               decoration: const InputDecoration(
                 labelText: "Nova Senha",
-                prefixIcon: Icon(Ionicons.keyOutline),
+                prefixIcon: Icon(Ionicons.key_outline),
               ),
               validator: (value) => value!.length < 6 ? "A senha deve ter pelo menos 6 caracteres" : null,
             ),
@@ -110,7 +110,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               obscureText: true,
               decoration: const InputDecoration(
                 labelText: "Confirmar Nova Senha",
-                prefixIcon: Icon(Ionicons.keyOutline),
+                prefixIcon: Icon(Ionicons.key_outline),
               ),
               validator: (value) {
                 if (value != _passwordController.text) return "As senhas não coincidem";

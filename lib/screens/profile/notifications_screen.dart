@@ -65,7 +65,7 @@ class NotificationsScreen extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Ionicons.notificationsOffOutline,
+                        Ionicons.notifications_off_outline,
                         size: 60,
                         color: Colors.grey[400],
                       ),
@@ -124,7 +124,7 @@ class NotificationsScreen extends StatelessWidget {
             shape: BoxShape.circle,
           ),
           child: Icon(
-            notification.read ? Ionicons.notificationsOutline : Ionicons.notifications,
+            notification.read ? Ionicons.notifications_outline : Ionicons.notifications,
             color: notification.read ? Colors.grey : AppColors.primary,
           ),
         ),

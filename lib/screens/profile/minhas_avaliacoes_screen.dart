@@ -53,7 +53,7 @@ class _MinhasAvaliacoesScreenState extends State<MinhasAvaliacoesScreen> {
           leading: Padding(
             padding: const EdgeInsets.only(left: 8.0),
             child: IconButton(
-              icon: const Icon(Ionicons.chevronBackOutline, color: AppColors.textPrimary, size: 24),
+              icon: const Icon(Ionicons.chevron_back_outline, color: AppColors.textPrimary, size: 24),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -229,7 +229,7 @@ class _MinhasAvaliacoesScreenState extends State<MinhasAvaliacoesScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      Ionicons.starOutline,
+                      Ionicons.star_outline,
                       size: 48,
                       color: AppColors.textMuted,
                     ),

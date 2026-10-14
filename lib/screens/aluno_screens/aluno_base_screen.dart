@@ -189,7 +189,7 @@ class _AlunoBaseScreenState extends State<AlunoBaseScreen> {
                       title: Text("Aulas"),
                     ),
                     BottomBarItem(
-                      icon: Icon(Ionicons.chatboxOutline),
+                      icon: Icon(Ionicons.chatbox_outline),
                       activeColor: primary,
                       title: Text("Chat"),
                     ),

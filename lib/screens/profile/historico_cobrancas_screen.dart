@@ -29,7 +29,7 @@ class _HistoricoCobrancasScreenState extends State<HistoricoCobrancasScreen> {
         leading: Padding(
           padding: const EdgeInsets.only(left: 8.0),
           child: IconButton(
-            icon: const Icon(Ionicons.chevronBackOutline, color: AppColors.textPrimary, size: 24),
+            icon: const Icon(Ionicons.chevron_back_outline, color: AppColors.textPrimary, size: 24),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -73,7 +73,7 @@ class _HistoricoCobrancasScreenState extends State<HistoricoCobrancasScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(
-                    Ionicons.receiptOutline,
+                    Ionicons.receipt_outline,
                     size: 64,
                     color: AppColors.gray300,
                   ),
@@ -195,7 +195,7 @@ class _HistoricoCobrancasScreenState extends State<HistoricoCobrancasScreen> {
                                 ),
                                 const SizedBox(width: 4),
                                 const Icon(
-                                  Ionicons.arrowForwardOutline,
+                                  Ionicons.arrow_forward_outline,
                                   size: 14,
                                   color: AppColors.primary,
                                 ),

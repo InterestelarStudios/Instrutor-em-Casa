@@ -91,7 +91,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            const Icon(Ionicons.warningOutline, size: 80, color: Colors.red),
+            const Icon(Ionicons.warning_outline, size: 80, color: Colors.red),
             const SizedBox(height: 20),
             const Text(
               "Esta ação é irreversível!",
@@ -110,7 +110,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
               obscureText: true,
               decoration: const InputDecoration(
                 labelText: "Confirme sua senha para continuar",
-                prefixIcon: Icon(Ionicons.lockClosedOutline),
+                prefixIcon: Icon(Ionicons.lock_closed_outline),
               ),
               validator: (value) => value!.isEmpty ? "Informe sua senha" : null,
             ),

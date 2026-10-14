@@ -15,7 +15,11 @@ import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
 
 class UserDetailsScreen extends StatefulWidget {
-  const UserDetailsScreen({super.key, required this.usuario, required this.myUser});
+  const UserDetailsScreen({
+    super.key,
+    required this.usuario,
+    required this.myUser,
+  });
   final Usuario usuario;
   final Usuario myUser;
 
@@ -27,8 +31,12 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isInstructor = widget.usuario.type == UserType.instrutor;
-    final rating = isInstructor ? (widget.usuario.instrutor?.rating ?? 5.0) : 5.0;
-    final ratingCount = isInstructor ? (widget.usuario.instrutor?.ratingCount ?? 0) : 0;
+    final rating = isInstructor
+        ? (widget.usuario.instrutor?.rating ?? 5.0)
+        : 5.0;
+    final ratingCount = isInstructor
+        ? (widget.usuario.instrutor?.ratingCount ?? 0)
+        : 0;
 
     return Scaffold(
       body: CustomScrollView(
@@ -42,14 +50,17 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                 children: [
                   _buildHeaderInfo(rating, ratingCount),
                   const SizedBox(height: AppSpacing.xl),
-                  
+
                   _buildSectionTitle("Sobre"),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    isInstructor 
-                        ? (widget.usuario.instrutor?.about ?? "Este instrutor ainda não adicionou uma apresentação.")
+                    isInstructor
+                        ? (widget.usuario.instrutor?.about ??
+                              "Este instrutor ainda não adicionou uma apresentação.")
                         : "Aluno em treinamento na plataforma Instrutor em Casa.",
-                    style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
 
@@ -89,7 +100,9 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   Widget _buildSliverAppBar() {
     final rating = widget.usuario.instrutor?.rating ?? 5.0;
     final ratingCount = widget.usuario.instrutor?.ratingCount ?? 0;
-    final showFavorite = widget.myUser.type == UserType.aluno && widget.usuario.type == UserType.instrutor;
+    final showFavorite =
+        widget.myUser.type == UserType.aluno &&
+        widget.usuario.type == UserType.instrutor;
 
     return SliverAppBar(
       expandedHeight: 200,
@@ -107,7 +120,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
               final isFav = snapshot.hasData && snapshot.data!.exists;
               return IconButton(
                 icon: Icon(
-                  isFav ? Ionicons.heart : Ionicons.heartOutline,
+                  isFav ? Ionicons.heart : Ionicons.heart_outline,
                   color: isFav ? Colors.red : Colors.white,
                 ),
                 onPressed: () async {
@@ -126,7 +139,11 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                       "image": widget.usuario.image,
                       "rating": rating,
                       "ratingCount": ratingCount,
-                      "categories": widget.usuario.instrutor?.categories.map((c) => c.name).toList() ?? [],
+                      "categories":
+                          widget.usuario.instrutor?.categories
+                              .map((c) => c.name)
+                              .toList() ??
+                          [],
                       "createdAt": FieldValue.serverTimestamp(),
                     });
                   }
@@ -151,10 +168,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
             Center(
               child: Hero(
                 tag: 'avatar_${widget.usuario.id}',
-                child: UserAvatar(
-                  user: widget.usuario.toDetails(),
-                  radius: 70,
-                ),
+                child: UserAvatar(user: widget.usuario.toDetails(), radius: 70),
               ),
             ),
           ],
@@ -170,12 +184,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-              child: Text(
-                widget.usuario.name,
-                style: AppTextStyles.h1,
-              ),
-            ),
+            Expanded(child: Text(widget.usuario.name, style: AppTextStyles.h1)),
             if (widget.usuario.type == UserType.instrutor)
               const Icon(Icons.verified, color: AppColors.primary, size: 24),
           ],
@@ -187,7 +196,9 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
             const SizedBox(width: 8),
             Text(
               rating.toStringAsFixed(1),
-              style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(width: 4),
             Text(
@@ -201,10 +212,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: AppTextStyles.h3.copyWith(fontSize: 18),
-    );
+    return Text(title, style: AppTextStyles.h3.copyWith(fontSize: 18));
   }
 
   Widget _buildStatsRow(bool isInstructor) {
@@ -213,7 +221,9 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         Expanded(
           child: _statCard(
             label: isInstructor ? "Aulas dadas" : "Aulas feitas",
-            value: isInstructor ? "${widget.usuario.instrutor?.aulas ?? 0}" : "0",
+            value: isInstructor
+                ? "${widget.usuario.instrutor?.aulas ?? 0}"
+                : "0",
             icon: Iconsax.teacher,
           ),
         ),
@@ -221,7 +231,9 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         Expanded(
           child: _statCard(
             label: "Horas totais",
-            value: isInstructor ? "${widget.usuario.instrutor?.horas ?? 0}h" : "0h",
+            value: isInstructor
+                ? "${widget.usuario.instrutor?.horas ?? 0}h"
+                : "0h",
             icon: Iconsax.timer_1,
           ),
         ),
@@ -229,7 +241,11 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     );
   }
 
-  Widget _statCard({required String label, required String value, required IconData icon}) {
+  Widget _statCard({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
@@ -286,7 +302,10 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           ),
           child: Text(
             "Cat. ${cat.name} • R\$ ${price.toStringAsFixed(0)}/h",
-            style: AppTextStyles.label.copyWith(color: AppColors.primary600, fontWeight: FontWeight.bold),
+            style: AppTextStyles.label.copyWith(
+              color: AppColors.primary600,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         );
       }).toList(),
@@ -306,7 +325,10 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
       physics: const NeverScrollableScrollPhysics(),
       emptyBuilder: (context) => const Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
-        child: Text("Nenhuma avaliação ainda.", style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
+        child: Text(
+          "Nenhuma avaliação ainda.",
+          style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+        ),
       ),
       itemBuilder: (context, snapshot) {
         final data = snapshot.data();
@@ -318,7 +340,9 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   Widget _buildReviewTile(Map<String, dynamic> data) {
     final stars = data['stars'] as int? ?? 5;
     final comment = data['comment'] as String? ?? "";
-    final date = data['created'] != null ? (data['created'] as Timestamp).toDate() : DateTime.now();
+    final date = data['created'] != null
+        ? (data['created'] as Timestamp).toDate()
+        : DateTime.now();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
@@ -345,7 +369,10 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
             const SizedBox(height: 10),
             Text(
               comment,
-              style: AppTextStyles.body.copyWith(fontSize: 13, fontStyle: FontStyle.italic),
+              style: AppTextStyles.body.copyWith(
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ],
         ],
@@ -359,7 +386,11 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5))
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
         ],
       ),
       child: SafeArea(
@@ -378,7 +409,14 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
             backgroundColor: AppColors.primary,
             shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMd),
           ),
-          label: const Text("Solicitar Treinamento", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          label: const Text(
+            "Solicitar Treinamento",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
           icon: const Icon(Iconsax.calendar_1, color: Colors.white),
         ),
       ),
@@ -394,7 +432,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           padding: const EdgeInsets.all(15),
           child: Row(
             children: [
-              const Icon(Ionicons.carOutline, color: AppColors.textMuted),
+              const Icon(Ionicons.car_outline, color: AppColors.textMuted),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -422,7 +460,11 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                 color: AppColors.primary50,
                 borderRadius: AppRadius.radiusMd,
               ),
-              child: const Icon(Ionicons.car, color: AppColors.primary600, size: 24),
+              child: const Icon(
+                Ionicons.car,
+                color: AppColors.primary600,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 15),
             Expanded(
@@ -443,7 +485,9 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                   const SizedBox(height: 2),
                   Text(
                     "Combustível: ${defaultVehicle.fuel}",
-                    style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ],
               ),

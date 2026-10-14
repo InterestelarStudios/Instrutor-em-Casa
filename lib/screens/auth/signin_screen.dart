@@ -46,7 +46,7 @@ class _SigninScreenState extends State<SigninScreen> {
                 controller: controllerEmail,
                 decoration: InputDecoration(
                   labelText: "E-mail",
-                  prefixIcon: Icon(Ionicons.mailOutline),
+                  prefixIcon: Icon(Ionicons.mail_outline),
                 ),
                 inputFormatters: [
                   LengthLimitingTextInputFormatter(60)
@@ -63,12 +63,12 @@ class _SigninScreenState extends State<SigninScreen> {
                 obscureText: obscurePass,
                 decoration: InputDecoration(
                   labelText: "Senha",
-                  prefixIcon: Icon(Ionicons.keyOutline),
+                  prefixIcon: Icon(Ionicons.key_outline),
                   suffixIcon: IconButton(
                     onPressed: ()=> setState(
                       ()=> obscurePass = !obscurePass
                     ),
-                    icon: Icon(obscurePass ? Ionicons.eyeOutline : Ionicons.eyeOffOutline)
+                    icon: Icon(obscurePass ? Ionicons.eye_outline : Ionicons.eye_off_outline)
                   ),
                 ),
                 inputFormatters: [

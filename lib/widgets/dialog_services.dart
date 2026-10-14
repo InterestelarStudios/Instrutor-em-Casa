@@ -97,7 +97,7 @@ class DialogServices{
             children: [
               icon ??
               Icon(
-                success ? Ionicons.checkmarkDoneCircleOutline : Ionicons.closeCircleOutline,
+                success ? Ionicons.checkmark_done_circle_outline : Ionicons.close_circle_outline,
                 color: success ? Colors.greenAccent[700] : Colors.redAccent[700],
                 size: 60,
               ),
@@ -133,7 +133,7 @@ class PaymentDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Icon(
-            success ? Ionicons.checkmarkDoneCircleOutline : Ionicons.closeCircleOutline,
+            success ? Ionicons.checkmark_done_circle_outline : Ionicons.close_circle_outline,
             color: success ? Colors.greenAccent[700] : Colors.redAccent[700],
             size: 60,
           ),

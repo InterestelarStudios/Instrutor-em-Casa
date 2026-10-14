@@ -37,7 +37,7 @@ class _FavoritosScreenState extends State<FavoritosScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Ionicons.heartDislikeOutline, size: 60, color: Colors.grey[400]),
+              Icon(Ionicons.heart_dislike_outline, size: 60, color: Colors.grey[400]),
               const SizedBox(height: 15),
               Text(
                 "Nenhum instrutor favorito",

@@ -71,7 +71,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         title("Minha conta"),
         ListTile(
-          leading: Icon(Ionicons.pencilOutline),
+          leading: Icon(Ionicons.pencil_outline),
           title: Text("Editar Perfil"),
           onTap: () => Navigator.push(
             context,
@@ -81,7 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         ListTile(
-          leading: Icon(Ionicons.documentOutline),
+          leading: Icon(Ionicons.document_outline),
           title: Text("Meus Documentos"),
           onTap: () => Navigator.push(
             context,
@@ -91,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         ListTile(
-          leading: Icon(Ionicons.keyOutline),
+          leading: Icon(Ionicons.key_outline),
           title: Text("Alterar Senha"),
           onTap: () => Navigator.push(
             context,
@@ -99,7 +99,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         ListTile(
-          leading: Icon(Ionicons.mailOutline),
+          leading: Icon(Ionicons.mail_outline),
           title: Text("Alterar E-mail"),
           onTap: () => Navigator.push(
             context,
@@ -109,7 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title("Aulas"),
         if (isAluno) ...[
           ListTile(
-            leading: const Icon(Ionicons.timeOutline),
+            leading: const Icon(Ionicons.time_outline),
             title: const Text("Horas de direção"),
             onTap: () => Navigator.push(
               context,
@@ -120,7 +120,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
         ListTile(
-          leading: const Icon(Ionicons.starOutline),
+          leading: const Icon(Ionicons.star_outline),
           title: const Text("Minhas avaliações"),
           onTap: () => Navigator.push(
             context,
@@ -131,7 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         if (isAluno) ...[
           ListTile(
-            leading: const Icon(Ionicons.heartOutline),
+            leading: const Icon(Ionicons.heart_outline),
             title: const Text("Instrutores Favoritos"),
             onTap: () => Navigator.push(
               context,
@@ -144,7 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (isAluno) ...[
           title("Pagamentos"),
           ListTile(
-            leading: const Icon(Ionicons.receiptOutline),
+            leading: const Icon(Ionicons.receipt_outline),
             title: const Text("Histórico de Cobranças"),
             onTap: () => Navigator.push(
               context,
@@ -156,7 +156,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
         title("Suporte"),
         ListTile(
-          leading: Icon(Ionicons.helpOutline),
+          leading: Icon(Ionicons.help_outline),
           title: Text("Central de Ajuda"),
           onTap: () => Navigator.push(
             context,
@@ -164,7 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         ListTile(
-          leading: Icon(Ionicons.informationCircleOutline),
+          leading: Icon(Ionicons.information_circle_outline),
           title: Text("Termos e Políticas"),
           onTap: () => Navigator.push(
             context,
@@ -172,7 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         ListTile(
-          leading: Icon(Ionicons.phonePortraitOutline),
+          leading: Icon(Ionicons.phone_portrait_outline),
           title: Text("Avaliar o App"),
         ),
         title("Conta"),
@@ -201,7 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           },
           title: Text("Encerrar Sessão"),
-          leading: Icon(Ionicons.logOutOutline),
+          leading: Icon(Ionicons.log_out_outline),
         ),
         ListTile(
           onTap: () => Navigator.push(
@@ -211,7 +211,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           leading: Icon(
-            Ionicons.phonePortraitOutline,
+            Ionicons.phone_portrait_outline,
             color: AppColors.emergency,
           ),
           title: Text(

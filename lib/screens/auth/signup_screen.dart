@@ -59,7 +59,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 controller: controllerName,
                 decoration: InputDecoration(
                   labelText: "Nome de Usuário",
-                  prefixIcon: Icon(Ionicons.personOutline),
+                  prefixIcon: Icon(Ionicons.person_outline),
                 ),
                 textCapitalization: TextCapitalization.words,
                 inputFormatters: [LengthLimitingTextInputFormatter(60)],
@@ -85,7 +85,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   });
                 },
                 decoration: InputDecoration(
-                  prefixIcon: Icon(Ionicons.maleFemaleOutline),
+                  prefixIcon: Icon(Ionicons.male_female_outline),
                   labelText: "Gênero",
                 ),
                 validator: (value) =>
@@ -114,7 +114,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 controller: controllerCEP,
                 decoration: InputDecoration(
                   labelText: "CEP (Obrigatório)",
-                  prefixIcon: Icon(Ionicons.locationOutline),
+                  prefixIcon: Icon(Ionicons.location_outline),
                 ),
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
@@ -131,7 +131,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 controller: controllerCPF,
                 decoration: InputDecoration(
                   labelText: "CPF",
-                  prefixIcon: Icon(Ionicons.idCardOutline),
+                  prefixIcon: Icon(Ionicons.id_card_outline),
                 ),
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
@@ -146,7 +146,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 controller: controllerPhone,
                 decoration: InputDecoration(
                   labelText: "Telefone",
-                  prefixIcon: Icon(Ionicons.callOutline),
+                  prefixIcon: Icon(Ionicons.call_outline),
                 ),
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
@@ -163,7 +163,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 controller: controllerEmail,
                 decoration: InputDecoration(
                   labelText: "E-mail",
-                  prefixIcon: Icon(Ionicons.mailOutline),
+                  prefixIcon: Icon(Ionicons.mail_outline),
                 ),
                 inputFormatters: [LengthLimitingTextInputFormatter(60)],
                 keyboardType: TextInputType.emailAddress,
@@ -180,13 +180,13 @@ class _SignupScreenState extends State<SignupScreen> {
                 obscureText: obscurePass,
                 decoration: InputDecoration(
                   labelText: "Senha",
-                  prefixIcon: Icon(Ionicons.keyOutline),
+                  prefixIcon: Icon(Ionicons.key_outline),
                   suffixIcon: IconButton(
                     onPressed: () => setState(() => obscurePass = !obscurePass),
                     icon: Icon(
                       obscurePass
-                          ? Ionicons.eyeOutline
-                          : Ionicons.eyeOffOutline,
+                          ? Ionicons.eye_outline
+                          : Ionicons.eye_off_outline,
                     ),
                   ),
                 ),

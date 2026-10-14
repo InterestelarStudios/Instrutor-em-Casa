@@ -188,7 +188,7 @@ class _GerenciarVeiculosScreenState extends State<GerenciarVeiculosScreen> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Ionicons.carOutline,
+                Ionicons.car_outline,
                 size: 60,
                 color: AppColors.textMuted,
               ),
@@ -320,7 +320,7 @@ class _GerenciarVeiculosScreenState extends State<GerenciarVeiculosScreen> {
                   ),
                 IconButton(
                   onPressed: () => _deleteVehicle(vehicle, isDefault),
-                  icon: const Icon(Ionicons.trashOutline, color: AppColors.emergency, size: 20),
+                  icon: const Icon(Ionicons.trash_outline, color: AppColors.emergency, size: 20),
                   tooltip: "Excluir veículo",
                 ),
               ],

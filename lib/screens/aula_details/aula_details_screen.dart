@@ -64,7 +64,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
                 value: 'help',
                 child: Row(
                   children: [
-                    Icon(Ionicons.helpCircleOutline, size: 20, color: Colors.blue),
+                    Icon(Ionicons.help_circle_outline, size: 20, color: Colors.blue),
                     SizedBox(width: 10),
                     Text("Ajuda com aula"),
                   ],
@@ -78,7 +78,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
                   value: 'cancel',
                   child: Row(
                     children: [
-                      Icon(Ionicons.closeCircleOutline, size: 20, color: AppColors.emergency),
+                      Icon(Ionicons.close_circle_outline, size: 20, color: AppColors.emergency),
                       SizedBox(width: 10),
                       Text("Cancelar aula"),
                     ],
@@ -332,7 +332,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
                         width: double.infinity,
                         child: OutlinedButton.icon(
                           onPressed: () => _rescheduleSession(session),
-                          icon: const Icon(Ionicons.calendarOutline),
+                          icon: const Icon(Ionicons.calendar_outline),
                           label: const Text("Remarcar Sessão"),
                         ),
                       ),
@@ -343,7 +343,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: () => _updateJourney(session, JourneyState.requested),
-                            icon: const Icon(Ionicons.navigateOutline),
+                            icon: const Icon(Ionicons.navigate_outline),
                             label: const Text("Iniciar Trajeto"),
                           ),
                         ),
@@ -351,7 +351,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: () => _updateJourney(session, JourneyState.enRoute),
-                            icon: const Icon(Ionicons.checkmarkCircleOutline),
+                            icon: const Icon(Ionicons.checkmark_circle_outline),
                             label: const Text("Aceitar Trajeto"),
                           ),
                         ),
@@ -359,7 +359,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => TrackingScreen(aulaId: aula.id, otherUser: aula.instrutor))),
-                            icon: const Icon(Ionicons.mapOutline),
+                            icon: const Icon(Ionicons.map_outline),
                             label: const Text("Acompanhar no Mapa"),
                           ),
                         ),
@@ -367,7 +367,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: () => _updateJourney(session, JourneyState.arrived),
-                            icon: const Icon(Ionicons.carOutline),
+                            icon: const Icon(Ionicons.car_outline),
                             label: const Text("Cheguei"),
                           ),
                         ),
@@ -543,7 +543,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
     return Row(
       children: [
         Icon(
-          checked ? Ionicons.checkmarkCircle : Ionicons.ellipseOutline,
+          checked ? Ionicons.checkmark_circle : Ionicons.ellipse_outline,
           size: 16,
           color: checked ? AppColors.success : Colors.grey,
         ),
@@ -668,7 +668,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
               updateStatus(LessonStatus.accepted);
             },
             label: Text("Aceitar"),
-            icon: Icon(Ionicons.checkmarkDoneOutline),
+            icon: Icon(Ionicons.checkmark_done_outline),
           ),
         ),
         SizedBox(width: 10,),
@@ -699,7 +699,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
               )
             ),
             label: Text("Recusar"),
-            icon: Icon(Ionicons.closeOutline),
+            icon: Icon(Ionicons.close_outline),
           ),
         ),
       ],
@@ -853,7 +853,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
                 ),
               ),
               ListTile(
-                leading: const Icon(Ionicons.qrCodeOutline),
+                leading: const Icon(Ionicons.qr_code_outline),
                 title: const Text("PIX"),
                 onTap: () {
                   Navigator.pop(context);
@@ -861,7 +861,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Ionicons.cardOutline),
+                leading: const Icon(Ionicons.card_outline),
                 title: const Text("Cartão de Crédito"),
                 onTap: () {
                   Navigator.pop(context);
@@ -869,7 +869,7 @@ class _AulaDetailsScreenState extends State<AulaDetailsScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Ionicons.cardOutline),
+                leading: const Icon(Ionicons.card_outline),
                 title: const Text("Cartão de Débito"),
                 onTap: () {
                   Navigator.pop(context);
